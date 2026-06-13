@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Dataset and generated artifacts
+data/*.csv
+*.png
