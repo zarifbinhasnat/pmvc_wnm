@@ -81,14 +81,19 @@ class PMVCTrainer:
         seed_idx = self._get_seed_indices(labels)
         unlabeled_idx = [i for i in range(len(texts)) if i not in seed_idx]
 
-        L_A = list(seed_idx)
-        L_B = list(seed_idx)
-
         labels_array = np.array(labels)
 
+        # L_* hold training-set row indices; y_* hold the labels used to
+        # train each view. Seed labels are the only ground-truth labels;
+        # everything added later is a PSEUDO-label from the opposite view.
+        L_A = list(seed_idx)
+        L_B = list(seed_idx)
+        y_A = list(labels_array[seed_idx])
+        y_B = list(labels_array[seed_idx])
+
         # initial training
-        self.f_A.fit(X_A[L_A], labels_array[L_A])
-        self.f_B.fit(X_B[L_B], labels_array[L_B])
+        self.f_A.fit(X_A[L_A], y_A)
+        self.f_B.fit(X_B[L_B], y_B)
 
         print(f"\nStarting co-training loop (T={self.T})...\n")
 
@@ -127,19 +132,21 @@ class PMVCTrainer:
             if t >= self.t_start:
                 self.noise_model.fit()
 
-            # cross-teaching: f_A teaches f_B
+            # cross-teaching: f_A teaches f_B with f_A's PREDICTED labels
             high_conf_A = np.where(conf_A >= self.threshold)[0]
             if len(high_conf_A) > 0:
                 top_k_A = high_conf_A[np.argsort(conf_A[high_conf_A])[-self.K:]]
                 new_for_B = [u_idx[i] for i in top_k_A]
                 L_B.extend(new_for_B)
+                y_B.extend(pred_A[top_k_A])
 
-            # cross-teaching: f_B teaches f_A
+            # cross-teaching: f_B teaches f_A with f_B's PREDICTED labels
             high_conf_B = np.where(conf_B >= self.threshold)[0]
             if len(high_conf_B) > 0:
                 top_k_B = high_conf_B[np.argsort(conf_B[high_conf_B])[-self.K:]]
                 new_for_A = [u_idx[i] for i in top_k_B]
                 L_A.extend(new_for_A)
+                y_A.extend(pred_B[top_k_B])
 
             # noise injection into f_A training (after t_start)
             if t >= self.t_start and self.noise_model.fitted:
@@ -149,11 +156,11 @@ class PMVCTrainer:
                 X_A_noisy, _ = build_view_a(
                     noisy_texts, fit=False, vectorizer=self.vec_A
                 )
-                self.f_A.fit(X_A_noisy, labels_array[L_A])
+                self.f_A.fit(X_A_noisy, y_A)
             else:
-                self.f_A.fit(X_A[L_A], labels_array[L_A])
+                self.f_A.fit(X_A[L_A], y_A)
 
-            self.f_B.fit(X_B[L_B], labels_array[L_B])
+            self.f_B.fit(X_B[L_B], y_B)
 
             # remove pseudo-labeled from unlabeled pool
             pseudo_labeled = set(
