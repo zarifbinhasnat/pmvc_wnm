@@ -1,9 +1,0 @@
-model,macro_f1,accuracy,train_s
-EXT baseline: SVM char n-gram (seed only),0.5548,0.6178,0.4
-EXT baseline: RF phonetic (seed only),0.392,0.5022,0.5
-EXT: standard co-training,0.574,0.6067,14.4
-EXT: PMVC-WNM (reliability reweight),0.5726,0.6178,16.2
-LOCAL baseline: LinearSVC char n-gram (seed),0.5465,0.6044,0.1
-LOCAL baseline: LR + BNPC phonetic (seed),0.5916,0.6244,1.2
-LOCAL: co-training (no noise),0.5954,0.6378,13.0
-LOCAL: PMVC-WNM full (noise injection),0.5884,0.6289,10.7
