@@ -13,10 +13,14 @@ import glob
 import os
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, StratifiedShuffleSplit
+from sklearn.svm import LinearSVC
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import f1_score, accuracy_score, classification_report
 
 from src.preprocess import load_and_clean
+from src.view_a_ngram import build_view_a
+from src.view_b_phonetic import build_view_b, make_view_b_classifier
 from src.cotraining import PMVCTrainer
 
 
@@ -42,6 +46,11 @@ def main():
                     help="optional: subsample this many rows for a faster run")
     ap.add_argument("--test-size", type=float, default=0.2,
                     help="held-out test fraction (default 0.2)")
+    ap.add_argument("--compare", action="store_true",
+                    help="also fit single-view baselines (View A alone, View B "
+                         "alone) on the SAME seed/test split, so you can see "
+                         "whether the full pipeline actually beats them on "
+                         "this dataset")
     args = ap.parse_args()
 
     df = load_and_clean(resolve_csv(args.csv_path))
@@ -59,6 +68,29 @@ def main():
     test_texts = test_df["clean"].tolist()
     y_test = test_df["label"].values
 
+    results = []
+
+    if args.compare:
+        print(f"--compare: fitting single-view baselines on the same "
+              f"{args.seed_size}-example seed for a fair comparison...\n")
+        sss = StratifiedShuffleSplit(n_splits=1, train_size=args.seed_size, random_state=42)
+        seed_local, _ = next(sss.split(np.zeros(len(train_df)), train_df["label"]))
+
+        XA, vecA = build_view_a(train_df["clean"].tolist())
+        XA_test, _ = build_view_a(test_texts, fit=False, vectorizer=vecA)
+        m = CalibratedClassifierCV(LinearSVC(max_iter=3000, random_state=42)).fit(
+            XA[seed_local], train_df["label"].values[seed_local])
+        p = m.predict(XA_test)
+        results.append(("Baseline: View A alone (char n-gram, seed only)",
+                        f1_score(y_test, p, average="macro"), accuracy_score(y_test, p)))
+
+        XB, vecB, _ = build_view_b(train_df["clean"].tolist())
+        XB_test, _, _ = build_view_b(test_texts, fit=False, vectorizer=vecB)
+        m = make_view_b_classifier().fit(XB[seed_local], train_df["label"].values[seed_local])
+        p = m.predict(XB_test)
+        results.append(("Baseline: View B alone (BNPC phonetic, seed only)",
+                        f1_score(y_test, p, average="macro"), accuracy_score(y_test, p)))
+
     print(f"\nTraining PMVC-WNM (seed_size={args.seed_size}) on {len(train_df)} rows, "
           f"testing on {len(test_df)} rows...\n")
 
@@ -68,8 +100,15 @@ def main():
     y_pred = trainer.predict(test_texts)
     macro_f1 = f1_score(y_test, y_pred, average="macro")
     acc = accuracy_score(y_test, y_pred)
+    results.append(("Full PMVC-WNM", macro_f1, acc))
 
-    print("\n================ RESULTS ================")
+    if args.compare:
+        print("\n================ COMPARISON (same seed/test split) ================")
+        print(f"{'model':52s} {'macro_f1':>9s} {'accuracy':>9s}")
+        for name, f1, a in results:
+            print(f"{name:52s} {f1:9.4f} {a:9.4f}")
+
+    print("\n================ FULL PMVC-WNM RESULTS ================")
     print(f"Macro-F1 : {macro_f1:.4f}")
     print(f"Accuracy : {acc:.4f}")
     print("\nPer-class report:")
