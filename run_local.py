@@ -9,6 +9,8 @@ Loads and cleans the dataset, trains the full PMVC-WNM pipeline, and prints
 the held-out macro-F1 / accuracy plus a per-class report. CPU only, no GPU.
 """
 import argparse
+import glob
+import os
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -18,9 +20,22 @@ from src.preprocess import load_and_clean
 from src.cotraining import PMVCTrainer
 
 
+def resolve_csv(path):
+    """Accept a CSV file directly, or a directory (e.g. the folder kagglehub
+    downloaded into) and find the CSV inside it."""
+    if os.path.isdir(path):
+        csvs = sorted(glob.glob(os.path.join(path, "**", "*.csv"), recursive=True))
+        if not csvs:
+            raise SystemExit(f"No CSV found under directory: {path}")
+        print(f"Using CSV: {csvs[0]}")
+        return csvs[0]
+    return path
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("csv_path", help="path to the dataset CSV (e.g. data/banglish_80k.csv)")
+    ap.add_argument("csv_path", help="CSV file OR a directory containing one "
+                                     "(e.g. the path kagglehub returned)")
     ap.add_argument("--seed-size", type=int, default=500,
                     help="number of labeled seed examples (default 500)")
     ap.add_argument("--sample", type=int, default=None,
@@ -29,7 +44,7 @@ def main():
                     help="held-out test fraction (default 0.2)")
     args = ap.parse_args()
 
-    df = load_and_clean(args.csv_path)
+    df = load_and_clean(resolve_csv(args.csv_path))
 
     if args.sample and args.sample < len(df):
         df, _ = train_test_split(df, train_size=args.sample,
