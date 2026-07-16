@@ -38,6 +38,15 @@ def load_and_clean(csv_path: str) -> pd.DataFrame:
     df['clean'] = df['banglish'].apply(preprocess_text)
     df = df[df['clean'].str.len() > 2].reset_index(drop=True)
 
+    # Ditch the native Bengali script column: the model operates ONLY on the
+    # romanized Banglish text. Datasets like b-and-b-80k ship a parallel
+    # 'Bengali' column; we drop it so it can never leak into features and so
+    # memory isn't wasted carrying ~80k rows of unused text.
+    dropped = [c for c in ('bengali',) if c in df.columns]
+    df = df[[c for c in ('banglish', 'clean', 'label') if c in df.columns]]
+    if dropped:
+        print(f"Dropped native-script column(s): {dropped} (model uses Banglish only)")
+
     print(f"Loaded {len(df)} samples")
     print(f"Label distribution:\n{df['label'].value_counts()}")
     return df

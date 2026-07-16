@@ -133,6 +133,7 @@ class PMVCTrainer:
                 self.noise_model.fit()
 
             # cross-teaching: f_A teaches f_B with f_A's PREDICTED labels
+            new_for_A, new_for_B = [], []
             high_conf_A = np.where(conf_A >= self.threshold)[0]
             if len(high_conf_A) > 0:
                 top_k_A = high_conf_A[np.argsort(conf_A[high_conf_A])[-self.K:]]
@@ -163,11 +164,7 @@ class PMVCTrainer:
             self.f_B.fit(X_B[L_B], y_B)
 
             # remove pseudo-labeled from unlabeled pool
-            pseudo_labeled = set(
-                new_for_A if len(high_conf_A) > 0 else []
-            ) | set(
-                new_for_B if len(high_conf_B) > 0 else []
-            )
+            pseudo_labeled = set(new_for_A) | set(new_for_B)
             unlabeled_idx = [i for i in unlabeled_idx if i not in pseudo_labeled]
 
         print("\nCo-training complete.")
@@ -175,22 +172,15 @@ class PMVCTrainer:
 
     def predict(self, texts: list) -> np.ndarray:
         """
-        Ensemble prediction: confidence-weighted vote.
-        f_B wins on high confidence, f_A as fallback.
+        Ensemble prediction: confidence-weighted soft vote.
+        Averages both views' class probabilities and takes the argmax,
+        so each view's vote counts in proportion to its confidence.
+        (The previous hard rule — f_B above threshold, else f_A — let the
+        weaker view override the stronger one whenever f_B was unsure,
+        and scored below f_B alone.)
         """
-        X_a, _ = build_view_a(texts, fit=False, vectorizer=self.vec_A)
-        X_b, _, _ = build_view_b(texts, fit=False, vectorizer=self.vec_B)
-
-        prob_A = self.f_A.predict_proba(X_a)
-        prob_B = self.f_B.predict_proba(X_b)
-
-        pred_A = self.f_A.predict(X_a)
-        pred_B = self.f_B.predict(X_b)
-
-        conf_B = np.max(prob_B, axis=1)
-
-        final = np.where(conf_B >= self.threshold, pred_B, pred_A)
-        return final
+        avg = self.predict_proba(texts)
+        return self.f_A.classes_[np.argmax(avg, axis=1)]
 
     def predict_proba(self, texts: list) -> np.ndarray:
         """Return averaged class probabilities from both views."""
