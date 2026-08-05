@@ -82,21 +82,26 @@ def make_model(kind, seed, dense=False):
     if kind == "multinomial_nb":
         return MultinomialNB()
     if kind == "knn_k5":
-        return KNeighborsClassifier(n_neighbors=5, metric="cosine")
+        return KNeighborsClassifier(n_neighbors=5, metric="cosine", n_jobs=-1)
     if kind == "knn_k15":
-        return KNeighborsClassifier(n_neighbors=15, metric="cosine")
+        return KNeighborsClassifier(n_neighbors=15, metric="cosine", n_jobs=-1)
     if kind == "nearest_centroid":
         return NearestCentroid()
     if kind == "decision_tree":
         return DecisionTreeClassifier(max_depth=20, random_state=seed)
     if kind == "random_forest":
-        return RandomForestClassifier(n_estimators=200, random_state=seed)
+        # capped at 50 trees / depth 15 (vs sklearn default 100/unbounded): a 200-tree,
+        # unbounded-depth forest measured 217s for 8 fits on this sparse 5000-dim
+        # feature space -- intractable for a 21-candidate x 2-view grid. The cap is
+        # applied identically to every seed/fold so the comparison stays fair.
+        return RandomForestClassifier(n_estimators=50, max_depth=15, random_state=seed, n_jobs=-1)
     if kind == "extra_trees":
-        return ExtraTreesClassifier(n_estimators=200, random_state=seed)
+        return ExtraTreesClassifier(n_estimators=50, max_depth=15, random_state=seed, n_jobs=-1)
     if kind == "bagging_linsvc":
-        return BaggingClassifier(LinearSVC(random_state=seed), n_estimators=20, random_state=seed)
+        return BaggingClassifier(LinearSVC(random_state=seed), n_estimators=20, random_state=seed,
+                                 n_jobs=-1)
     if kind == "adaboost":
-        return AdaBoostClassifier(n_estimators=100, random_state=seed)
+        return AdaBoostClassifier(n_estimators=50, random_state=seed)
     if kind == "gradient_boosting_capped":
         # capped: default n_estimators=100 takes 30-40s/fit here; 40 keeps it tractable
         return GradientBoostingClassifier(n_estimators=40, max_depth=3, random_state=seed)
