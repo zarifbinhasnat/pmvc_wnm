@@ -22,7 +22,7 @@ from common import (
     build_working_set, build_view_a, build_view_b_soundex, make_split,
     make_view_a_classifier, make_view_b_classifier, PHONETIC_VARIANTS, SEEDS, CLASSES,
 )
-from exp6_exhaustive_model_zoo import make_model
+from model_factory import make_model
 
 df = build_working_set()
 texts = df["clean_text"].tolist()

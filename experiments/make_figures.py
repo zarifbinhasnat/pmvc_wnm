@@ -27,7 +27,7 @@ ax.set_xlabel("Macro-F1 (mean over 3 seeds, error = std)")
 ax.set_title("Q1: View A / View B classifier comparison")
 ax.invert_yaxis()
 plt.tight_layout()
-plt.savefig(f"{OUT}/fig1_classifier_comparison.png")
+plt.savefig(f"{OUT}/fig1_classifier_comparison.png", bbox_inches="tight")
 plt.close()
 
 # --- Fig 2: Q3b purity trajectory -------------------------------------------
@@ -46,7 +46,7 @@ ax.set_title("Q3: Purity trajectory -- the gate's advantage inverts over iterati
 ax.legend()
 ax.grid(alpha=0.3)
 plt.tight_layout()
-plt.savefig(f"{OUT}/fig2_purity_trajectory.png")
+plt.savefig(f"{OUT}/fig2_purity_trajectory.png", bbox_inches="tight")
 plt.close()
 
 # --- Fig 3: Q3c threshold sweep ---------------------------------------------
@@ -64,7 +64,7 @@ ax1.axvline(0.55, color="gray", linestyle=":", alpha=0.7)
 ax1.annotate("deployed (0.55)", xy=(0.55, ax1.get_ylim()[0]), fontsize=9, color="gray")
 ax1.set_title("Q3: Threshold sweep -- F1 vs. purity trade-off")
 plt.tight_layout()
-plt.savefig(f"{OUT}/fig3_threshold_sweep.png")
+plt.savefig(f"{OUT}/fig3_threshold_sweep.png", bbox_inches="tight")
 plt.close()
 
 # --- Fig 4: Q4 improvement ladder -------------------------------------------
@@ -77,7 +77,7 @@ ax.set_xlabel("Macro-F1")
 ax.set_title("Q4: Cumulative single-view improvement ladder")
 ax.invert_yaxis()
 plt.tight_layout()
-plt.savefig(f"{OUT}/fig4_improvement_ladder.png")
+plt.savefig(f"{OUT}/fig4_improvement_ladder.png", bbox_inches="tight")
 plt.close()
 
 # --- Fig 5: exp6 exhaustive model zoo (both views) --------------------------
@@ -97,7 +97,7 @@ for view in ["A", "B"]:
               if f in sub["family"].values]
     ax.legend(handles=handles, loc="lower right", fontsize=8, title="ML family")
     plt.tight_layout()
-    plt.savefig(f"{OUT}/fig5_exhaustive_zoo_view{view}.png")
+    plt.savefig(f"{OUT}/fig5_exhaustive_zoo_view{view}.png", bbox_inches="tight")
     plt.close()
 
 # --- Fig 6: CV vs holdout scatter (generalization gap) ----------------------
@@ -113,7 +113,7 @@ ax.set_title("CV estimate vs. true generalization")
 ax.legend()
 ax.grid(alpha=0.3)
 plt.tight_layout()
-plt.savefig(f"{OUT}/fig6_cv_vs_holdout.png")
+plt.savefig(f"{OUT}/fig6_cv_vs_holdout.png", bbox_inches="tight")
 plt.close()
 
 # --- Fig 7: label-budget sensitivity ----------------------------------------
@@ -130,7 +130,7 @@ ax.set_title("Label-budget sensitivity: team's model vs. best-found model")
 ax.legend()
 ax.grid(alpha=0.3)
 plt.tight_layout()
-plt.savefig(f"{OUT}/fig7_budget_sensitivity.png")
+plt.savefig(f"{OUT}/fig7_budget_sensitivity.png", bbox_inches="tight")
 plt.close()
 
 # --- Fig 8: noise robustness -------------------------------------------------
@@ -150,7 +150,7 @@ ax.set_ylabel("Macro-F1")
 ax.set_title("Spelling-noise robustness")
 ax.legend()
 plt.tight_layout()
-plt.savefig(f"{OUT}/fig8_noise_robustness.png")
+plt.savefig(f"{OUT}/fig8_noise_robustness.png", bbox_inches="tight")
 plt.close()
 
 # --- Fig 9/10: confusion matrices -------------------------------------------
@@ -166,14 +166,14 @@ for view, fname in [("A", "results/exp7_confusion_matrix_A.npy"),
     ax.set_yticks(range(3)); ax.set_yticklabels(CLASSES)
     ax.set_xlabel("Predicted"); ax.set_ylabel("True")
     kind = lines.get(f"BEST_{view}_KIND", "?")
-    ax.set_title(f"Confusion matrix -- View {view} best model ({kind})")
+    ax.set_title(f"View {view} best model\n({kind})", fontsize=10)
     for i in range(3):
         for j in range(3):
             ax.text(j, i, f"{cm[i,j]}\n({cm_norm[i,j]:.0%})", ha="center", va="center",
                     color="white" if cm_norm[i, j] > 0.5 else "black", fontsize=9)
     plt.colorbar(im, ax=ax, fraction=0.046)
     plt.tight_layout()
-    plt.savefig(f"{OUT}/fig9_confusion_view{view}.png")
+    plt.savefig(f"{OUT}/fig9_confusion_view{view}.png", bbox_inches="tight")
     plt.close()
 
 print("All figures written to report/figures/")
