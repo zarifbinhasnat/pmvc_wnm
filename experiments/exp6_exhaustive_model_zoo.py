@@ -138,12 +138,14 @@ CANDIDATES = [
     ("neural",        "mlp_small",              False),
 ]
 
-# gradient_boosting_capped measured 1324s wall (8 fits) on View A alone -- by far
+# gradient_boosting_capped measured 1324.4s wall (8 fits) on View A alone -- by far
 # the slowest candidate in the entire grid, and already conclusively behind every
-# linear model (holdout f1=0.5251 vs. best linear ~0.565). Not repeated on View B:
-# the runtime cost is prohibitive and the "boosting underperforms, is slow" finding
-# is already established by this one measurement plus hist_gb_capped on both views.
-VIEW_RESTRICT = {"gradient_boosting_capped": ["A"]}
+# linear model (CV f1=0.6006+/-0.0064, holdout f1=0.5251+/-0.0061, brier=0.1932,
+# fit_s_mean=7.12s). That exact measurement is injected into the results CSV by
+# inject_gb_result.py rather than re-run -- the runtime cost is prohibitive and the
+# "boosting underperforms, is slow" finding is already established by this
+# measurement plus hist_gb_capped on both views. Excluded from the live grid here.
+VIEW_RESTRICT = {"gradient_boosting_capped": []}
 
 MAX_FEATURES = 5000  # match the team's deployed budget for a fair comparison
 
