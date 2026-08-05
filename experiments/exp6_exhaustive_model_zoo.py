@@ -133,10 +133,17 @@ CANDIDATES = [
     ("tree_ensemble", "extra_trees",            False),
     ("tree_ensemble", "bagging_linsvc",         False),
     ("boosting",      "adaboost",               False),
-    ("boosting",      "gradient_boosting_capped", True),
+    ("boosting",      "gradient_boosting_capped", True),  # View A only -- see VIEW_RESTRICT
     ("boosting",      "hist_gb_capped",         True),
     ("neural",        "mlp_small",              False),
 ]
+
+# gradient_boosting_capped measured 1324s wall (8 fits) on View A alone -- by far
+# the slowest candidate in the entire grid, and already conclusively behind every
+# linear model (holdout f1=0.5251 vs. best linear ~0.565). Not repeated on View B:
+# the runtime cost is prohibitive and the "boosting underperforms, is slow" finding
+# is already established by this one measurement plus hist_gb_capped on both views.
+VIEW_RESTRICT = {"gradient_boosting_capped": ["A"]}
 
 MAX_FEATURES = 5000  # match the team's deployed budget for a fair comparison
 
@@ -196,6 +203,10 @@ for view, X in [("A", X_A), ("B", X_B)]:
     y = df["label"].values
     print(f"\n{'='*100}\nVIEW {view}\n{'='*100}")
     for family, kind, dense in CANDIDATES:
+        if view not in VIEW_RESTRICT.get(kind, ["A", "B"]):
+            print(f"  [SKIPPED] {family:15s} {kind:26s} on View {view} "
+                  f"(restricted to {VIEW_RESTRICT[kind]} -- see script docstring)")
+            continue
         t0 = time.time()
         cv_f1, cv_std, cv_time = evaluate_cv(view, kind, dense, X, y)
         if cv_f1 is None:
