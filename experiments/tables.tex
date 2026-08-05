@@ -1,0 +1,238 @@
+% ============================================================================
+% tables.tex -- ready-to-paste LaTeX tables of the measured results answering
+% the faculty's four questions. Matches the booktabs style already used in
+% 102_118_144.tex. Paste each table into the relevant paper section and add
+% a \label{} + \ref{} in the surrounding prose (required by the rubric).
+%
+% NOTE ON PROSE: these tables report numbers only. Every sentence of
+% interpretation around them must be written by the team -- see FINDINGS.md
+% for the full analysis to draw from, and the course's AI-usage disclosure
+% requirement if any of this scaffolding is used in the submission.
+%
+% NOTE ON TEMPLATE: this paper currently uses \documentclass[12pt]{article},
+% but the course guidelines require the provided IEEE conference template.
+% That is a separate, more consequential fix the team should make before
+% submission -- these tables use plain booktabs and will drop into either.
+% ============================================================================
+
+% ---------------------------------------------------------------------------
+% Table: Q1 -- View A / View B classifier comparison
+% ---------------------------------------------------------------------------
+\begin{table}[H]
+\centering
+\begin{tabular}{llrrr}
+\toprule
+\textbf{View} & \textbf{Classifier} & \textbf{Macro-F1} & \textbf{Brier} & \textbf{Fit (s)} \\
+\midrule
+A & SVC (Platt-scaled)                  & 0.5624 & 0.1807 & 1.44 \\
+A & Logistic Regression                 & 0.5613 & 0.1802 & 0.73 \\
+A & Calibrated LinearSVC                & 0.5596 & 0.1813 & 0.12 \\
+A & \textbf{LinearSVC + softmax (used)} & 0.5534 & \textbf{0.1960} & \textbf{0.02} \\
+\midrule
+B & \textbf{Logistic Regression (used)} & \textbf{0.5522} & 0.1845 & 1.31 \\
+B & LinearSVC + softmax                 & 0.5488 & 0.2002 & 0.01 \\
+B & Complement Naive Bayes              & 0.5340 & 0.1952 & 0.01 \\
+B & Random Forest                       & 0.5245 & 0.1907 & 1.49 \\
+\bottomrule
+\end{tabular}
+\caption{Single-view classifier comparison (mean over 3 seeds). Lower Brier
+score indicates better-calibrated confidence estimates. The deployed View A
+classifier (LinearSVC + softmax margins) is the fastest option but also the
+lowest-scoring and worst-calibrated of the four tested.}
+\label{tab:classifier-comparison}
+\end{table}
+
+% ---------------------------------------------------------------------------
+% Table: Q2 -- n-gram range sweep, at the deployed feature budget
+% ---------------------------------------------------------------------------
+\begin{table}[H]
+\centering
+\begin{tabular}{llrr}
+\toprule
+\textbf{View} & \textbf{Config (5{,}000 features)} & \textbf{Macro-F1} & \textbf{Std} \\
+\midrule
+A & char(2,3)                    & 0.5611 & 0.0012 \\
+A & \textbf{char(3,4) (used)}    & 0.5534 & 0.0120 \\
+\midrule
+B & word(1,1)                    & 0.5575 & 0.0109 \\
+B & \textbf{word(1,2) (used)}    & 0.5522 & 0.0093 \\
+\bottomrule
+\end{tabular}
+\caption{Feature n-gram range comparison at the deployed 5{,}000-feature
+budget (mean over 3 seeds). The character/word split between views is
+directionally correct (Table~\ref{tab:ngram-direction}), but the specific
+ranges chosen are not optimal at this feature budget.}
+\label{tab:ngram-budget}
+\end{table}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llrr}
+\toprule
+\textbf{View} & \textbf{Best analyzer type} & \textbf{Macro-F1} & \textbf{Gap vs.\ other analyzer} \\
+\midrule
+A & char-level (best config) & 0.5779 & +0.0065 \\
+A & word-level (best config)  & 0.5714 & -- \\
+\midrule
+B & word-level (best config)  & 0.5606 & +0.0186 \\
+B & char-level (best config)  & 0.5420 & -- \\
+\bottomrule
+\end{tabular}
+\caption{Best-achievable macro-F1 by analyzer type, across all tested
+ranges and feature budgets. Confirms character n-grams suit the orthographic
+View A and word-level tokens suit the already phoneme-normalized View B.}
+\label{tab:ngram-direction}
+\end{table}
+
+% ---------------------------------------------------------------------------
+% Table: Q3a -- gate variant comparison
+% ---------------------------------------------------------------------------
+\begin{table}[H]
+\centering
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Pseudo-label selection rule} & \textbf{Macro-F1} & \textbf{Pseudo-labels} & \textbf{Purity} \\
+\midrule
+\textbf{Agreement + confident (used)} & \textbf{0.5794 $\pm$ 0.0094} & 7{,}191 & 0.859 \\
+View A confidence only (standard)     & 0.5767 $\pm$ 0.0101 & 5{,}784 & 0.881 \\
+Agreement OR one very confident       & 0.5739 $\pm$ 0.0058 & 21{,}827 & 0.758 \\
+Agreement only, no threshold          & 0.5701 $\pm$ 0.0077 & 35{,}100 & 0.709 \\
+Either view confident (OR union)      & 0.5701 $\pm$ 0.0077 & 35{,}100 & 0.673 \\
+\bottomrule
+\end{tabular}
+\caption{Pseudo-label selection gate comparison, confidence threshold fixed
+at 0.55 (mean $\pm$ std over 3 seeds). The deployed agreement gate scores
+best but the margin over plain confidence filtering (0.0027) is inside the
+seed-to-seed standard deviation.}
+\label{tab:gate-comparison}
+\end{table}
+
+% ---------------------------------------------------------------------------
+% Table: Q3b -- purity trajectory (the key figure-quality result)
+% ---------------------------------------------------------------------------
+\begin{table}[H]
+\centering
+\begin{tabular}{lrr}
+\toprule
+\textbf{Iteration} & \textbf{Standard gate purity} & \textbf{Agreement gate purity} \\
+\midrule
+0 (first)     & 0.916 & \textbf{0.929} \\
+2             & 0.900 & 0.859 \\
+6             & 0.899 & 0.864 \\
+11 (final)    & \textbf{0.891} & 0.854 \\
+\bottomrule
+\end{tabular}
+\caption{Pseudo-label purity by co-training iteration, seed 42. The
+agreement gate's purity advantage appears only at iteration 0 and inverts by
+the final iteration, consistent with the two views becoming less independent
+as pseudo-labeled data accumulates in both training pools.}
+\label{tab:purity-trajectory}
+\end{table}
+% Suggested companion FIGURE (not a table): line plot of purity vs.
+% iteration for both gates, seed-averaged with a shaded std band -- the
+% crossover around iteration 1-2 is the visual payoff of this result.
+
+% ---------------------------------------------------------------------------
+% Table: Q3c -- confidence threshold sweep
+% ---------------------------------------------------------------------------
+\begin{table}[H]
+\centering
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Threshold} & \textbf{Macro-F1} & \textbf{Pseudo-labels} & \textbf{Purity} \\
+\midrule
+0.40--0.50 & $\sim$0.570 & 27,207--35,100 & 0.71--0.74 \\
+\textbf{0.55 (used)} & \textbf{0.5794} & 7{,}191 & 0.859 \\
+0.60 & 0.5760 & 1{,}641 & 0.931 \\
+0.65--0.70 & $\sim$0.573 & 120--460 & 0.95--1.00 \\
+\bottomrule
+\end{tabular}
+\caption{Confidence threshold sweep on the deployed agreement gate (mean
+over 3 seeds). 0.55 is the empirically best-performing threshold tested in
+either direction.}
+\label{tab:threshold-sweep}
+\end{table}
+
+% ---------------------------------------------------------------------------
+% Table: Q4 -- cumulative improvement ladder
+% ---------------------------------------------------------------------------
+\begin{table}[H]
+\centering
+\begin{tabular}{lrr}
+\toprule
+\textbf{Configuration} & \textbf{Macro-F1} & \textbf{$\Delta$ from baseline} \\
+\midrule
+Baseline (deployed config)                  & 0.5534 & --      \\
++ \texttt{max\_features} 5k$\to$50k         & 0.5729 & +0.0195 \\
++ \texttt{min\_df=2}                        & 0.5733 & +0.0199 \\
++ \texttt{class\_weight=`balanced'}         & 0.5741 & +0.0207 \\
++ tuned $C$ (grid search)                   & 0.5751 & +0.0217 \\
++ word(1,2) $\cup$ char(3,5) feature union  & 0.5830 & +0.0296 \\
+\textbf{+ probability calibration}          & \textbf{0.5849} & \textbf{+0.0315} \\
+\bottomrule
+\end{tabular}
+\caption{Cumulative single-view (View A) improvement ladder, each row adds
+one change on top of the previous, mean over 3 seeds.}
+\label{tab:improvement-ladder}
+\end{table}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lrr}
+\toprule
+\textbf{View B encoder} & \textbf{Macro-F1} & \textbf{$\Delta$} \\
+\midrule
+Soundex-style (deployed)             & 0.5522 & -- \\
+\textbf{BNPC (full phoneme sequence)} & \textbf{0.5786} & \textbf{+0.0264} \\
+\bottomrule
+\end{tabular}
+\caption{View B phonetic encoder comparison, single-view, mean over 3
+seeds. BNPC preserves the full phoneme sequence instead of collapsing to a
+short consonant-class skeleton, avoiding unrelated words colliding on the
+same code.}
+\label{tab:bnpc-swap}
+\end{table}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{Supervision level} & \textbf{Macro-F1} \\
+\midrule
+600-row labeled seed (deployed)         & 0.5534 \\
+\textbf{All $\sim$9{,}430 training rows} & \textbf{0.6562} \\
+\bottomrule
+\end{tabular}
+\caption{Full-supervision ceiling check: even with every available training
+label, macro-F1 on the merged 3-class label scheme does not exceed 0.656,
+bounding how much headroom any modeling improvement can realistically claim.}
+\label{tab:supervision-ceiling}
+\end{table}
+
+% ---------------------------------------------------------------------------
+% Table: supplementary -- model zoo / efficiency frontier
+% ---------------------------------------------------------------------------
+\begin{table}[H]
+\centering
+\begin{tabular}{llrr}
+\toprule
+\textbf{View} & \textbf{Model} & \textbf{Macro-F1} & \textbf{Fit (s)} \\
+\midrule
+A & Logistic Regression       & 0.5613 & 1.56 \\
+A & Calibrated LinearSVC      & 0.5596 & 0.11 \\
+A & Random Forest             & 0.5551 & 1.03 \\
+A & \textbf{LinearSVC + softmax (used)} & 0.5534 & \textbf{0.02} \\
+A & Hist. Gradient Boosting   & 0.5311 & 28.91 \\
+\midrule
+B & \textbf{Logistic Regression (used)} & \textbf{0.5522} & 1.03 \\
+B & Complement Naive Bayes    & 0.5340 & 0.01 \\
+B & Random Forest             & 0.5245 & 1.46 \\
+B & Hist. Gradient Boosting   & 0.4860 & 31.35 \\
+\bottomrule
+\end{tabular}
+\caption{Extended classifier zoo, single-view, mean over 3 seeds. Gradient
+boosting is both the slowest and least accurate option on either view,
+independently supporting the project's classical-linear-model, no-GPU
+design premise.}
+\label{tab:model-zoo}
+\end{table}

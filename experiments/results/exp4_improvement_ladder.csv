@@ -1,0 +1,11 @@
+rung,f1_mean,f1_std,acc_mean
+"0. baseline (svm_softmax, char(3,4), 5k feat)",0.5534,0.012,0.5541
+1. max_features=50000,0.5729,0.0036,0.5742
+2. + min_df=2,0.5733,0.0016,0.5745
+3. + class_weight=balanced,0.5741,0.0024,0.5752
+4. + C tuned (C=0.3),0.5751,0.0028,0.5782
+"5. + word(1,2) UNION char(3,5) [50k total]",0.583,0.0019,0.5847
+6. + CalibratedClassifierCV(LinearSVC),0.5849,0.0032,0.5867
+7. View B: BNPC (not Soundex),0.5786,0.0089,0.5793
+7b. View B: Soundex (team baseline),0.5522,0.0093,0.5529
+8. FULL-SUPERVISION CEILING (~9.4k labels),0.6562,0.0031,0.6569

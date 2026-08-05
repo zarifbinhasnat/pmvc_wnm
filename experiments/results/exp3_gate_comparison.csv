@@ -1,0 +1,6 @@
+gate,f1_best_mean,f1_best_std,total_pseudo_mean,mean_purity,iters_mean
+agreement_and_confident (pmvc_wnm),0.5794,0.0094,7191.0,0.859,12.0
+view_a_only (standard),0.5767,0.0101,5783.6667,0.8807,12.0
+agreement_or_one_very_confident,0.5739,0.0058,21827.0,0.7575,12.0
+agreement_no_threshold,0.5701,0.0077,35100.0,0.7089,12.0
+or_union,0.5701,0.0077,35100.0,0.6734,12.0
