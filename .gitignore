@@ -8,3 +8,15 @@ ablation.png
 learning_curve.png
 disagree_rate.png
 experiments/data/
+
+# LaTeX build byproducts (paper.tex, references.bib, tables_generated.tex,
+# figures/, and the compiled paper.pdf ARE tracked -- only the intermediate
+# build files from running pdflatex/bibtex locally are ignored)
+experiments/paper/*.aux
+experiments/paper/*.log
+experiments/paper/*.out
+experiments/paper/*.bbl
+experiments/paper/*.blg
+experiments/paper/*.fls
+experiments/paper/*.fdb_latexmk
+experiments/paper/*.synctex.gz
