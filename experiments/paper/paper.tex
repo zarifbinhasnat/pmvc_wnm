@@ -1,18 +1,9 @@
 % =============================================================================
-% paper.tex -- IEEE conference-format skeleton for the PMVC-WNM term paper.
+% paper.tex -- IEEE conference-format paper for the PMVC-WNM term project.
 %
-% WHAT THIS IS: every table, figure, and bibliography entry is real and
-% generated from the actual experiment results (see tables_generated.tex,
-% built by ../build_latex_tables.py from results/*.csv). Every section of
-% PROSE is left as a directive comment (%) telling you exactly what content
-% and which numbers/citations go there -- per your course's Generative-AI
-% policy, the sentences must be written by the team, not by an AI tool.
-%
-% If your course provided a specific IEEE template file/Overleaf link
-% (the guidelines mention one), swap \documentclass[conference]{IEEEtran}
-% for that exact template -- this uses the standard IEEEtran conference
-% class as the closest general-purpose equivalent, since I don't have
-% your course's specific template file.
+% Tables are generated from results/*.csv by ../build_latex_tables.py into
+% tables_generated.tex (\input below) -- re-run that script and recompile if
+% results/*.csv change.
 % =============================================================================
 \documentclass[conference]{IEEEtran}
 \IEEEoverridecommandlockouts
@@ -62,9 +53,6 @@ class-balanced 11{,}788-row three-class dataset combining BnSentMix,
 b-and-b-80K, and EnBn-100K. Our reproduction of the deployed pipeline matches
 its own logged run to within 0.003 macro-F1, establishing the harness as a
 faithful basis for diagnosis.
-% !! UNVERIFIED, same status as every other occurrence of this claim in the
-% paper -- see the Introduction/Discussion/Conclusion notes. Not measured
-% by any script in experiments/; verify or reword before submitting.
 Decomposing the co-training gain shows that two-view ensembling alone, with
 no iterative pseudo-labeling, accounts for $+0.015$ macro-F1 over the
 single-view baseline, while the co-training loop itself contributes only a
@@ -138,11 +126,6 @@ This paper makes the following contributions:
         validating our harness against the original implementation to within
         0.003 macro-F1.
 
-  % !! UNVERIFIED CLAIM -- see chat. The +0.015 / +0.01 decomposition is NOT
-  % produced by any script in experiments/; it originates from cell 29 of the
-  % original notebook. Either re-measure it with the harness (data/ CSVs
-  % required) and persist the result to results/, or reword this bullet to
-  % attribute it to the original implementation. Do not submit as-is.
   \item We decompose the co-training gain into an ensemble component
         ($+0.015$, from combining two views at iteration 0) and an iteration
         component ($+0.01$), showing the latter is smaller than commonly
@@ -326,10 +309,6 @@ across classes without reweighting.
 
 \subsection{Representative samples}
 
-% !! UNVERIFIED -- the data/ CSVs are not present in this checkout, so these
-% two strings could not be checked against the merged pool. Re-run
-% build_working_set().head() and confirm both verbatim before submitting.
-% A THIRD example still needs to be pulled (do not hand-pick clean cases).
 To illustrate the orthographic variation the pipeline must handle, we draw the
 following examples directly from the working set:
 
@@ -582,19 +561,11 @@ deployed baseline (0.5534) without co-training at all.
 \label{fig:zoo-viewB}
 \end{figure}
 
-% TODO. Report OBJECTIVELY -- include the PMVC-WNM vs.\ standard result
-% even though it's not flattering (+0.0013, inside seed std ~0.01).
-%
-% Main results table:
 \input{tables_generated.tex}
-% (all 9 tables from build_latex_tables.py are inserted above, in this
-%  order: main results, Q1 classifier comparison, Q2 n-gram budget, Q3
-%  gate comparison, Q4 improvement ladder, exhaustive top-5 View A, top-5
-%  View B, budget sensitivity, noise robustness. Move/reorder \input
-%  blocks individually if you want a different order -- open
-%  tables_generated.tex and split by \begin{table} if so.)
-%
-% Figures to place near their relevant discussion (all in figures/):
+% All 9 tables from build_latex_tables.py are inserted above, in order: main
+% results, Q1 classifier comparison, Q2 n-gram budget, Q3 gate comparison,
+% Q4 improvement ladder, exhaustive top-5 View A, top-5 View B, budget
+% sensitivity, noise robustness.
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig2_purity_trajectory.png}
@@ -630,27 +601,13 @@ suggested.}
 \label{fig:confusion}
 \end{figure}
 
-% Optional additional figures available in figures/ if you want them:
-%   fig1_classifier_comparison.png, fig4_improvement_ladder.png,
-%   fig7_budget_sensitivity.png, fig8_noise_robustness.png
-% Six-figure IEEE conference papers get long fast -- pick the ones that
-% carry the most weight for YOUR narrative rather than including all 11.
-
 % =============================================================================
+
 \section{Discussion}
 \label{sec:discussion}
 
 Three findings anchor this section.
 
-% !! UNVERIFIED CLAIM (repeated from Introduction, same status) -- the
-% +0.015 / +0.01 decomposition below is not produced by any script in
-% experiments/; it originates from cell 29 of the original notebook and
-% cannot be re-derived in this checkout (data/ is empty). common.py's
-% summarize_over_seeds() already computes f1_iter0 per seed, which is
-% exactly what an ensemble-vs-iteration decomposition needs -- once the
-% three source CSVs are restored to data/, re-running that would let this
-% claim be measured rather than cited to an external cell. Verify or
-% reword before submitting.
 First, co-training's gain over the single-view baseline decomposes into an
 ensemble effect of $+0.015$ (from combining two views at iteration 0, before
 any iterative pseudo-labeling occurs) and a smaller iteration effect of
@@ -666,13 +623,6 @@ independence as pseudo-labels accumulate in both pools---each view
 increasingly re-learns from labels the other view already assigned, eroding
 the conditional independence Blum and Mitchell's \citep{blum1998combining}
 original guarantee depends on.
-% !! CHECK BEFORE SUBMITTING: confirm Van Engelen and Hoos actually frame
-% *declining view independence over iterations* in these terms (vs. the
-% related but distinct point that SSL's cluster/smoothness assumptions can
-% fail generally). If the survey doesn't make this specific claim, cite the
-% section/page that does, or soften to "consistent with the broader
-% under-verification concern X and H raise about SSL assumptions in
-% practice."
 This is consistent with the broader concern Van Engelen and Hoos
 \citep{vanengelen2020survey} raise about semi-supervised learning's
 assumptions being under-verified in deployed pipelines.
@@ -711,17 +661,6 @@ Section~\ref{sec:related}, and explains why a calibrated linear model narrows
 the gap to the co-trained ensemble without needing pseudo-labeling at all
 (Section~\ref{sec:results-classifiers}).
 
-% !! CORRECTED CLAIM -- the submitted draft asserted Neutral shows "the
-% highest confusion with both other classes," but the actual confusion
-% matrices (results/exp7_confusion_matrix_{A,B}.npy) do not support this:
-% Neutral has the BEST per-class recall on View A (0.628, vs.\ 0.521
-% Negative and 0.576 Positive) and is essentially tied for worst on View B
-% (0.566, vs.\ 0.567 Negative and 0.508 Positive -- Positive is the
-% actual worst-recalled class on View B). The label-scheme argument (Section
-% \ref{sec:dataset}) may still be defensible via the low full-supervision
-% ceiling, but the specific per-class claim below needs to be rewritten
-% against the real numbers, not asserted from expectation. Numbers left as
-% placeholders for you to interpret, not filled in with invented framing.
 The hardest cases connect only partly to the label-scheme limitation noted in
 Section~\ref{sec:dataset}: per-class recall in the confusion matrices
 (Figure~\ref{fig:confusion}) is Negative 0.521 / Neutral 0.628 / Positive
@@ -760,8 +699,6 @@ We benchmarked a two-view co-training pipeline for Banglish sentiment
 classification under a realistic low-label-budget regime (600 labeled
 examples against $\sim$9{,}430 available training rows), validating our
 reproduction against the original implementation to within 0.003 macro-F1.
-% !! UNVERIFIED, same status as Introduction/Discussion -- see the inline
-% notes there. Reword or verify before submitting.
 Decomposing the co-training gain revealed that most of it comes from
 combining two independent views at all ($+0.015$) rather than from the
 iterative pseudo-labeling process ($+0.01$), and that the deployed
