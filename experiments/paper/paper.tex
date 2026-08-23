@@ -72,53 +72,166 @@
 
 % =============================================================================
 \section{Introduction}
-% See the separate Introduction LaTeX skeleton already provided in chat for
-% the full paragraph-by-paragraph directive breakdown (hook / narrow / gap /
-% contributions bullets / organization sentence). Paste that skeleton here
-% once you've written the sentences, or ask for it again.
-%
-% Quick-reference numbers for the "narrow" paragraph:
-%   - labeled seed = 600 rows; unlabeled pool ~8,830; full training pool
-%     ~9,430 rows --> labeling rate ~6.4%.
-%
-% Contributions bullets should end with a \label{} you can \ref{} later if
-% useful, and must be followed by one sentence on paper organization.
+\label{sec:intro}
+
+Code-mixed, Roman-script social media text---commonly termed \emph{Banglish},
+in which Bangla is transliterated into Latin characters and freely interleaved
+with English---is ubiquitous across South Asian social platforms, yet it is
+poorly served by standard NLP tooling trained on formal, monolingual corpora.
+The core obstacle is orthographic: Banglish has no fixed spelling convention,
+so a single word may surface in a dozen visually and phonetically related but
+string-dissimilar forms, undermining tokenizers, embeddings, and classifiers
+that assume orthographic regularity.
+
+We focus this problem on sentiment classification under a low-label-budget
+regime---the realistic deployment scenario in which thousands of unlabeled
+comments are readily scraped but only a small fraction can be manually
+annotated. We instantiate this concretely with 600 labeled examples against a
+pool of roughly 9{,}430 available training rows, a labeling rate of
+approximately 6.4\%, reflecting the annotation budgets typical of small
+research teams and low-resource languages rather than the fully-labeled
+corpora assumed by most benchmark work.
+
+Prior Banglish sentiment classification work has largely pursued one of two
+directions: data augmentation to synthetically expand labeled sets
+\citep{tareq2023augmentation, sultana2024crosslingual}, or fine-tuning deep
+transformer models on whatever labeled data is available
+\citep{alam2025bnsentmix}. Neither line evaluates classical two-view
+co-training in the original sense of Blum and Mitchell
+\citep{blum1998combining}---training two conditionally-independent-view
+classifiers that iteratively pseudo-label each other's confident
+predictions---as a low-resource remedy for this specific language setting, and
+no prior study rigorously diagnoses why co-training helps when it does. In
+particular, co-training gains in the literature are typically presented as a
+single aggregate improvement, without decomposing how much of that gain comes
+from ensembling two views at all versus from the iterative pseudo-labeling
+process itself---a distinction this paper makes explicit.
+
+This paper makes the following contributions:
+
+\begin{itemize}
+  \item We reproduce and rigorously benchmark a two-view (orthographic +
+        phonetic) co-training pipeline for Banglish sentiment classification,
+        validating our harness against the original implementation to within
+        0.003 macro-F1.
+
+  % !! UNVERIFIED CLAIM -- see chat. The +0.015 / +0.01 decomposition is NOT
+  % produced by any script in experiments/; it originates from cell 29 of the
+  % original notebook. Either re-measure it with the harness (data/ CSVs
+  % required) and persist the result to results/, or reword this bullet to
+  % attribute it to the original implementation. Do not submit as-is.
+  \item We decompose the co-training gain into an ensemble component
+        ($+0.015$, from combining two views at iteration 0) and an iteration
+        component ($+0.01$), showing the latter is smaller than commonly
+        assumed.
+
+  \item We show the deployed pseudo-label agreement gate's purity advantage is
+        not stable across iterations---it wins at iteration 0 (0.929 vs.\
+        0.916) and loses by the final iteration (0.854 vs.\ 0.891)---and
+        attribute this to declining view independence as pseudo-labels
+        accumulate in both pools.
+
+  \item We conduct an exhaustive comparison of 21 classical classifiers across
+        7 ML families and find a previously untested classifier
+        (\texttt{CalibratedClassifierCV(RidgeClassifier)}) beats the deployed
+        choice on both views, with the advantage verified stable across label
+        budgets (300--1{,}200) and under synthetic spelling noise (up to
+        35\%).
+
+  \item We identify and quantify a hard performance ceiling ($\sim$0.66
+        macro-F1 under full supervision) attributable to label-scheme noise,
+        not model choice.
+\end{itemize}
+
+The remainder of the paper is organized as follows: Section~\ref{sec:related}
+reviews related work; Section~\ref{sec:dataset} describes the dataset;
+Section~\ref{sec:methodology} details the methodology;
+Section~\ref{sec:results} reports results; Section~\ref{sec:discussion}
+discusses their implications; and Section~\ref{sec:conclusion} concludes.
 
 % =============================================================================
 \section{Related Work}
-% TODO 0.5-1.5 pages, >= 10 sources, organized THEMATICALLY with your own
-% synthesizing prose (do not just list papers). Three clusters, with the
-% verified citation keys already in references.bib:
-%
-% Cluster A -- Co-training / semi-supervised learning theory
-%   \citep{blum1998combining} defines the core two-independent-views
-%   assumption; \citep{vanengelen2020survey} frames declining view
-%   independence over training as an open problem -- this is exactly what
-%   your Results/Discussion measures directly (Figure
-%   \ref{fig:purity-trajectory}).
-%
-% Cluster B -- Banglish / code-mixed sentiment analysis
-%   \citep{alam2025bnsentmix} (BnSentMix, one of your three source
-%   datasets) reports 69.8% transformer accuracy -- your framing: classical
-%   models at 500-600 labels approach this without a GPU, not "beat
-%   transformers." \citep{islam2023augmentation} and
-%   \citep{sultana2024crosslingual} both use data augmentation as their
-%   noise strategy; contrast with your WNM's LEARNED (not synthetic)
-%   spelling-variant injection.
-%
-% Cluster C -- Feature engineering & classifier calibration
-%   \citep{cavnar1994ngram} justifies char n-grams for noisy/varied text
-%   (supports your Q2 char-vs-word finding, Table \ref{tab:ngram-budget}).
-%   \citep{platt1999probabilistic} and \citep{niculescumizil2005predicting}
-%   are your direct evidence base for the calibration discussion --- cite
-%   Platt when explaining why full Platt scaling is slow; cite
-%   Niculescu-Mizil & Caruana when discussing why an uncalibrated
-%   margin-to-probability mapping is a poor confidence estimate (Table
-%   \ref{tab:classifier-comparison}).
-%
-% VERIFY every citation against its primary source (Google Scholar / ACL
-% Anthology / IEEE Xplore) before submitting -- some author lists in
-% references.bib are abbreviated pending your verification.
+\label{sec:related}
+
+\subsection{Co-training and semi-supervised learning theory}
+
+Co-training was introduced by Blum and Mitchell \citep{blum1998combining}, who
+formalized the setting in which each labeled example can be described by two
+distinct feature views, and showed that if each view is individually
+sufficient to predict the label and the two views are conditionally
+independent given the label, a classifier trained on one view can generate
+confident pseudo-labels that usefully augment training data for a classifier
+trained on the other. This conditional-independence assumption is rarely
+satisfied exactly in practice, and Van Engelen and Hoos
+\citep{vanengelen2020survey}, in their survey of the broader semi-supervised
+learning landscape, identify the erosion of view independence over successive
+self-training or co-training rounds as a persistent, under-examined failure
+mode---one that most applied papers acknowledge in passing but few measure
+directly on a deployed pipeline. This is precisely the gap our paper closes:
+rather than reporting an aggregate co-training gain, we track the pseudo-label
+agreement gate's purity iteration-by-iteration and show its advantage over the
+alternative literally reverses sign as the two views' pseudo-label pools
+converge on each other's outputs---an empirical instance of the theoretical
+concern Van Engelen and Hoos raise, observed on real Banglish data rather than
+in simulation.
+
+\subsection{Banglish and code-mixed sentiment analysis}
+
+Recent work on Bengali--English code-mixed sentiment has pursued two main
+strategies for coping with label scarcity and orthographic noise. Tareq et
+al.\ \citep{tareq2023augmentation} and Sultana and Mamun
+\citep{sultana2024crosslingual} both rely on data augmentation---generating
+synthetic training examples via cross-lingual word replacement and related
+transformations---to expand small labeled sets and to expose the model to
+spelling variation. Separately, Alam et al.\ \citep{alam2025bnsentmix}
+introduce BnSentMix, a diverse 20{,}000-example Bengali--English code-mixed
+sentiment dataset, and benchmark 14 baselines including transformer encoders
+further pretrained on code-mixed text, reaching 69.8\% accuracy (69.1\% F1)
+under full supervision. We position our work against this backdrop rather than
+in competition with it: our classical two-view pipeline, trained on only 600
+labeled examples with no GPU, is not intended to surpass transformer accuracy,
+but to approach it at a small fraction of the label budget and zero training
+cost---a materially different and, for low-resource deployment settings,
+arguably more actionable trade-off. Where Tareq et al.\ and Sultana and Mamun
+treat orthographic noise as something to be countered with synthetically
+augmented spelling variants, our weakly-supervised noise model instead learns
+and injects noise patterns from the pipeline's own disagreement signal, which
+we argue is a more targeted mechanism than augmentation applied independent of
+what the model actually confuses.
+
+\subsection{Feature engineering and classifier calibration}
+
+Our View A representation builds directly on Cavnar and Trenkle
+\citep{cavnar1994ngram}, who showed that character n-gram features are robust
+to the spelling and typographical variation that defeats word-level
+tokenization---the same property that motivates their use here for Banglish,
+where a single word can surface in many orthographic forms. Our View B
+phonetic encoding draws on the classical Soundex family of phonetic coding
+schemes \citep{russell1918index, russell1922index}, adapted with
+Bangla-specific phoneme groupings. For the classifier comparison in
+Section~\ref{sec:results}, we ground our calibration discussion in two
+foundational results: Platt \citep{platt1999probabilistic}, who introduced
+fitting a sigmoid to SVM decision scores via an internal cross-validation loop
+to produce probability estimates---the mechanism responsible for the
+substantial slowdown of \texttt{SVC(probability=True)} relative to margin-only
+variants---and Niculescu-Mizil and Caruana \citep{niculescumizil2005predicting},
+who showed empirically that several standard classifiers, including SVMs and
+boosted trees, produce poorly calibrated probability estimates out of the box,
+such that an uncalibrated margin-to-probability mapping can be a materially
+unreliable confidence signal. These two results provide the literature basis
+for our finding that \texttt{CalibratedClassifierCV}-wrapped classifiers
+outperform their uncalibrated counterparts specifically on the
+confidence-threshold-gated pseudo-labeling step central to co-training, rather
+than leaving this as an isolated empirical observation.
+
+Taken together, these three clusters motivate the structure of the paper:
+Cluster A supplies the theoretical prediction (declining view independence)
+that our diagnostic in Sections~\ref{sec:results} and~\ref{sec:discussion}
+tests directly; Cluster B supplies the applied baseline and the
+augmentation-versus-learned-noise contrast that frames our contribution
+honestly rather than as an unqualified improvement; and Cluster C supplies the
+mechanistic explanation for why calibration, not classifier family alone,
+drives the exhaustive comparison's result.
 
 % =============================================================================
 \section{Dataset}
@@ -291,6 +404,7 @@ suggested.}
 
 % =============================================================================
 \section{Conclusion}
+\label{sec:conclusion}
 % TODO 1-2 paragraphs, NO new information, NO reflective language
 % ("valuable learning experience" etc. -- rubric explicitly forbids this).
 % Structure: (a) restate 2-3 strongest findings in one sentence each
