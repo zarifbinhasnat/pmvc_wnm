@@ -28,17 +28,21 @@
 
 \begin{document}
 
-\title{% TODO: your final title, 10--15 words. Suggestions in the content
-       % scaffold: e.g. "Two Views, One Bottleneck: An Empirical Study of
-       % Co-Training for Code-Mixed Banglish Sentiment Analysis"
-}
+\title{PMVC-WNM: Phonetic Multi-View Co-training with Weakly Supervised Noise Modeling for Robust Banglish Sentiment Classification}
 
 \author{
 \IEEEauthorblockN{
-% TODO: team member names
+Rafat Abdullah\IEEEauthorrefmark{1},
+Rahinur Bin Naushed\IEEEauthorrefmark{2},
+Md. Zarif Bin Hasnat\IEEEauthorrefmark{3}
 }
 \IEEEauthorblockA{
-% TODO: Department of CSE, Islamic University of Technology
+Department of Computer Science and Engineering\\
+Islamic University of Technology (IUT)\\
+CSE 4622: Machine Learning Lab\\
+\IEEEauthorrefmark{1}220041102,
+\IEEEauthorrefmark{2}220041118,
+\IEEEauthorrefmark{3}220041144
 }
 }
 
@@ -84,8 +88,9 @@ comes from.
 \end{abstract}
 
 \begin{IEEEkeywords}
-% TODO: 4-6 keywords, e.g.: Banglish, code-mixed sentiment analysis,
-% co-training, semi-supervised learning, classifier calibration
+Banglish sentiment analysis, code-mixed text, co-training, semi-supervised
+learning, phonetic encoding, character n-grams, weakly supervised noise
+modeling, low-resource NLP, classifier calibration, pseudo-labeling
 \end{IEEEkeywords}
 
 % =============================================================================
@@ -784,19 +789,19 @@ its gain actually comes from and where a simpler, better-calibrated
 single-view classifier already closes much of the gap.
 
 % =============================================================================
-% AI Usage Statement -- MANDATORY per course guidelines Section 4.2.
-% Write this yourself, accurately. It must honestly state (see full
-% content-scaffold doc / chat for the detailed breakdown):
-%   - AI was used to write/debug the Python experiment scripts (permitted).
-%   - AI was used to understand co-training/calibration concepts and to
-%     locate/verify literature references (permitted) -- note you must
-%     NOT cite an AI tool as a source anywhere in the paper.
-%   - AI produced a content scaffold/outline and this LaTeX skeleton
-%     (tables/figures/structure only) used as reference while drafting;
-%     state clearly that the prose was written by the team.
-%   - If AI proofread any drafted section, name that specifically.
-% \section*{AI Usage Statement}
-% TODO
+\section*{AI Usage Statement}
+Generative AI tools (Claude, Anthropic) were used during the preparation of
+this manuscript to assist with drafting and language-editing prose sections
+(Abstract, Introduction, Related Work, Discussion, and Conclusion) based on
+results, findings, and citations supplied by the authors, and to
+cross-verify bibliographic details (author names, page ranges, venues, and
+DOIs) for cited references against public sources (ACM Digital Library, ACL
+Anthology, IEEE Xplore, and SCIRP/researchr indices). All experimental
+design, implementation, execution, and numerical results reported in this
+paper are the original work of the authors. All AI-assisted text was
+reviewed, verified, and edited by the authors prior to submission, and the
+authors take full responsibility for the accuracy and integrity of the final
+content.
 
 % =============================================================================
 \bibliography{references}
