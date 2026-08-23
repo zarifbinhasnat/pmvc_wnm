@@ -17,6 +17,18 @@
 \bibliographystyle{IEEEtranN}
 \usepackage{hyperref}
 
+% Loosen IEEEtran's default float-per-page limits so the 9 tables + 6
+% figures in Results can place near their source position instead of
+% cascading past later sections when the default caps (topnumber=2,
+% totalnumber=3) are hit.
+\setcounter{topnumber}{4}
+\setcounter{bottomnumber}{4}
+\setcounter{totalnumber}{8}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.9}
+\renewcommand{\textfraction}{0.05}
+\renewcommand{\floatpagefraction}{0.7}
+
 \begin{document}
 
 \title{PMVC-WNM: Phonetic Multi-View Co-training with Weakly Supervised Noise Modeling for Robust Banglish Sentiment Classification}
@@ -526,6 +538,23 @@ up to 1.0 at $\theta=0.70$, at the cost of admitting only 120 pseudo-labels
 total versus 7{,}191 at $\theta=0.55$), a direct illustration of the
 quantity/purity trade-off the gate is negotiating.
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/fig2_purity_trajectory.png}
+\caption{Pseudo-label purity by co-training iteration, seed 42. The
+agreement gate's purity advantage appears only at iteration 0 and inverts
+by the final iteration.}
+\label{fig:purity-trajectory}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/fig3_threshold_sweep.png}
+\caption{Macro-F1 (left axis) and pseudo-label purity (right axis) vs.\
+confidence threshold on the deployed agreement gate.}
+\label{fig:threshold-sweep}
+\end{figure}
+
 \subsection{Exhaustive classifier comparison}
 \label{sec:results-zoo}
 
@@ -563,28 +592,6 @@ deployed baseline (0.5534) without co-training at all.
 \label{fig:zoo-viewB}
 \end{figure}
 
-\input{tables_generated.tex}
-% All 9 tables from build_latex_tables.py are inserted above, in order: main
-% results, Q1 classifier comparison, Q2 n-gram budget, Q3 gate comparison,
-% Q4 improvement ladder, exhaustive top-5 View A, top-5 View B, budget
-% sensitivity, noise robustness.
-\begin{figure}[t]
-\centering
-\includegraphics[width=\linewidth]{figures/fig2_purity_trajectory.png}
-\caption{Pseudo-label purity by co-training iteration, seed 42. The
-agreement gate's purity advantage appears only at iteration 0 and inverts
-by the final iteration.}
-\label{fig:purity-trajectory}
-\end{figure}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\linewidth]{figures/fig3_threshold_sweep.png}
-\caption{Macro-F1 (left axis) and pseudo-label purity (right axis) vs.\
-confidence threshold on the deployed agreement gate.}
-\label{fig:threshold-sweep}
-\end{figure}
-
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig6_cv_vs_holdout.png}
@@ -593,6 +600,12 @@ score. Points below the diagonal generalize worse than their CV estimate
 suggested.}
 \label{fig:cv-vs-holdout}
 \end{figure}
+
+\input{tables_generated.tex}
+% All 9 tables from build_latex_tables.py are inserted above, in order: main
+% results, Q1 classifier comparison, Q2 n-gram budget, Q3 gate comparison,
+% Q4 improvement ladder, exhaustive top-5 View A, top-5 View B, budget
+% sensitivity, noise robustness.
 
 \begin{figure}[t]
 \centering
