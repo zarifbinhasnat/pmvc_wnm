@@ -3,6 +3,8 @@
 
 \begin{table}[t]
 \centering
+\footnotesize
+\setlength{\tabcolsep}{2pt}
 \caption{Main results: macro-F1 on the held-out test set, mean over 3 seeds (42, 7, 2024).}
 \label{tab:main-results}
 \begin{tabular}{lc}
@@ -22,6 +24,8 @@ Full-supervision ceiling ($\sim$9{,}430 labels) & 0.6562 \\
 
 \begin{table}[t]
 \centering
+\scriptsize
+\setlength{\tabcolsep}{2pt}
 \caption{View A / View B classifier comparison (mean over 3 seeds). Lower Brier score indicates better-calibrated confidence estimates.}
 \label{tab:classifier-comparison}
 \begin{tabular}{llrrr}
@@ -43,6 +47,8 @@ B & \texttt{random\_forest} & 0.5245 & 0.1907 & 1.492 \\
 
 \begin{table}[t]
 \centering
+\footnotesize
+\setlength{\tabcolsep}{2pt}
 \caption{Feature n-gram range comparison at the deployed 5{,}000-feature budget (mean over 3 seeds).}
 \label{tab:ngram-budget}
 \begin{tabular}{llr}
@@ -60,17 +66,19 @@ B & word(1,2) [deployed] & 0.5522 \\
 
 \begin{table}[t]
 \centering
+\footnotesize
+\setlength{\tabcolsep}{2pt}
 \caption{Pseudo-label gate comparison, confidence threshold fixed at 0.55 (mean $\pm$ std over 3 seeds).}
 \label{tab:gate-comparison}
-\begin{tabular}{lrrr}
+\begin{tabular}{@{}p{2.5cm}rrr@{}}
 \toprule
 \textbf{Gate} & \textbf{Macro-F1} & \textbf{Pseudo-labels} & \textbf{Purity} \\
 \midrule
-agreement\_and\_confident (pmvc\_wnm) & 0.5794 $\pm$ 0.0094 & 7191 & 0.859 \\
-view\_a\_only (standard) & 0.5767 $\pm$ 0.0101 & 5783 & 0.881 \\
-agreement\_or\_one\_very\_confident & 0.5739 $\pm$ 0.0058 & 21827 & 0.757 \\
-agreement\_no\_threshold & 0.5701 $\pm$ 0.0077 & 35100 & 0.709 \\
-or\_union & 0.5701 $\pm$ 0.0077 & 35100 & 0.673 \\
+agreement and confident (pmvc wnm) & 0.5794 $\pm$ 0.0094 & 7191 & 0.859 \\
+view a only (standard) & 0.5767 $\pm$ 0.0101 & 5783 & 0.881 \\
+agreement or one very confident & 0.5739 $\pm$ 0.0058 & 21827 & 0.757 \\
+agreement no threshold & 0.5701 $\pm$ 0.0077 & 35100 & 0.709 \\
+or union & 0.5701 $\pm$ 0.0077 & 35100 & 0.673 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -78,6 +86,8 @@ or\_union & 0.5701 $\pm$ 0.0077 & 35100 & 0.673 \\
 
 \begin{table}[t]
 \centering
+\footnotesize
+\setlength{\tabcolsep}{2pt}
 \caption{Cumulative single-view (View A) improvement ladder, each row adds one change on top of the previous (mean over 3 seeds).}
 \label{tab:improvement-ladder}
 \begin{tabular}{lr}
@@ -98,6 +108,8 @@ or\_union & 0.5701 $\pm$ 0.0077 & 35100 & 0.673 \\
 
 \begin{table}[t]
 \centering
+\footnotesize
+\setlength{\tabcolsep}{2pt}
 \caption{Top 5 of 21 candidates tested, View A (mean over 3 seeds).}
 \label{tab:zoo-top5-viewA}
 \begin{tabular}{llrrr}
@@ -116,6 +128,8 @@ or\_union & 0.5701 $\pm$ 0.0077 & 35100 & 0.673 \\
 
 \begin{table}[t]
 \centering
+\footnotesize
+\setlength{\tabcolsep}{2pt}
 \caption{Top 5 of 21 candidates tested, View B (mean over 3 seeds).}
 \label{tab:zoo-top5-viewB}
 \begin{tabular}{llrrr}
@@ -134,6 +148,8 @@ or\_union & 0.5701 $\pm$ 0.0077 & 35100 & 0.673 \\
 
 \begin{table}[t]
 \centering
+\footnotesize
+\setlength{\tabcolsep}{2pt}
 \caption{Label-budget sensitivity: team's deployed model vs.\ best-found model (mean over 3 seeds).}
 \label{tab:budget-sensitivity}
 \begin{tabular}{lrrrr}
@@ -151,6 +167,8 @@ or\_union & 0.5701 $\pm$ 0.0077 & 35100 & 0.673 \\
 
 \begin{table}[t]
 \centering
+\footnotesize
+\setlength{\tabcolsep}{2pt}
 \caption{Spelling-noise robustness: macro-F1 under injected phonetic-variant corruption (mean over 3 seeds).}
 \label{tab:noise-robustness}
 \begin{tabular}{lrrrr}

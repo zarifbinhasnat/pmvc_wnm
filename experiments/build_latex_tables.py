@@ -56,6 +56,8 @@ STANDARD_F1, PMVC_F1 = 0.5767, 0.5794  # from verify_reproduction.py console out
 blocks.append(r"""
 \begin{table}[t]
 \centering
+\footnotesize
+\setlength{\tabcolsep}{2pt}
 \caption{Main results: macro-F1 on the held-out test set, mean over 3 seeds (42, 7, 2024).}
 \label{tab:main-results}
 \begin{tabular}{lc}
@@ -83,6 +85,8 @@ rows = "\n".join(
 blocks.append(r"""
 \begin{table}[t]
 \centering
+\scriptsize
+\setlength{\tabcolsep}{2pt}
 \caption{View A / View B classifier comparison (mean over 3 seeds). Lower Brier score indicates better-calibrated confidence estimates.}
 \label{tab:classifier-comparison}
 \begin{tabular}{llrrr}
@@ -107,6 +111,8 @@ b_word12 = get(budget5k, view="B", analyzer="word", ngram_range="(1, 2)")
 blocks.append(r"""
 \begin{table}[t]
 \centering
+\footnotesize
+\setlength{\tabcolsep}{2pt}
 \caption{Feature n-gram range comparison at the deployed 5{,}000-feature budget (mean over 3 seeds).}
 \label{tab:ngram-budget}
 \begin{tabular}{llr}
@@ -127,14 +133,16 @@ B & word(1,2) [deployed] & """ + f"{b_word12.f1_mean:.4f}" + r""" \\
 # ---------------------------------------------------------------------------
 df3g = pd.read_csv(f"{R}/exp3_gate_comparison.csv")
 rows = "\n".join(
-    f"{tex_escape(r.gate)} & {r.f1_best_mean:.4f} $\\pm$ {r.f1_best_std:.4f} & {int(r.total_pseudo_mean)} & {r.mean_purity:.3f} \\\\"
+    f"{tex_escape(r.gate.replace('_', ' '))} & {r.f1_best_mean:.4f} $\\pm$ {r.f1_best_std:.4f} & {int(r.total_pseudo_mean)} & {r.mean_purity:.3f} \\\\"
     for r in df3g.itertuples())
 blocks.append(r"""
 \begin{table}[t]
 \centering
+\footnotesize
+\setlength{\tabcolsep}{2pt}
 \caption{Pseudo-label gate comparison, confidence threshold fixed at 0.55 (mean $\pm$ std over 3 seeds).}
 \label{tab:gate-comparison}
-\begin{tabular}{lrrr}
+\begin{tabular}{@{}p{2.5cm}rrr@{}}
 \toprule
 \textbf{Gate} & \textbf{Macro-F1} & \textbf{Pseudo-labels} & \textbf{Purity} \\
 \midrule
@@ -152,6 +160,8 @@ rows = "\n".join(f"{tex_escape(r.rung)} & {r.f1_mean:.4f} $\\pm$ {r.f1_std:.4f} 
 blocks.append(r"""
 \begin{table}[t]
 \centering
+\footnotesize
+\setlength{\tabcolsep}{2pt}
 \caption{Cumulative single-view (View A) improvement ladder, each row adds one change on top of the previous (mean over 3 seeds).}
 \label{tab:improvement-ladder}
 \begin{tabular}{lr}
@@ -175,6 +185,8 @@ for view in ["A", "B"]:
     blocks.append(r"""
 \begin{table}[t]
 \centering
+\footnotesize
+\setlength{\tabcolsep}{2pt}
 \caption{Top 5 of 21 candidates tested, View """ + view + r""" (mean over 3 seeds).}
 \label{tab:zoo-top5-view""" + view + r"""}
 \begin{tabular}{llrrr}
@@ -198,6 +210,8 @@ rows = "\n".join(
 blocks.append(r"""
 \begin{table}[t]
 \centering
+\footnotesize
+\setlength{\tabcolsep}{2pt}
 \caption{Label-budget sensitivity: team's deployed model vs.\ best-found model (mean over 3 seeds).}
 \label{tab:budget-sensitivity}
 \begin{tabular}{lrrrr}
@@ -221,6 +235,8 @@ rows = "\n".join(
 blocks.append(r"""
 \begin{table}[t]
 \centering
+\footnotesize
+\setlength{\tabcolsep}{2pt}
 \caption{Spelling-noise robustness: macro-F1 under injected phonetic-variant corruption (mean over 3 seeds).}
 \label{tab:noise-robustness}
 \begin{tabular}{lrrrr}
