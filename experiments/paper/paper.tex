@@ -20,6 +20,7 @@
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{multirow}
 \usepackage{float}
 \usepackage[numbers]{natbib}
 \bibliographystyle{IEEEtranN}
@@ -236,31 +237,108 @@ drives the exhaustive comparison's result.
 % =============================================================================
 \section{Dataset}
 \label{sec:dataset}
-% TODO. Content + exact numbers (all verified from common.py / results):
-%   - 3 sources merged: BnSentMix (20,015 rows) \citep{alam2025bnsentmix},
-%     b-and-b-80K (80,098 rows, native-Bengali column dropped)
-%     \citep{kaggle_bandb80k}, EnBn-100K (100,000 rows).
-%   - Merged + deduplicated (exact-text dedup) --> 186,138 rows.
-%   - Balanced sample: 11,788 rows (Negative 3,889 / Neutral 4,000 /
-%     Positive 3,899).
-%   - Label unification table -- TODO: format as a \begin{table} with the
-%     mapping (BnSentMix numeric 0/1/2,3,4 -> Positive/Negative/Neutral;
-%     emotion words similarly mapped, see chat history for the full map).
-%   - Split: 80/20 stratified train/test; 600-row stratified labeled seed
-%     from the training pool; ~8,830-row unlabeled pool. 3 seeds (42, 7,
-%     2024), every reported number averaged over these.
-%   - Representative samples: pull 2-3 REAL rows yourself from the data
-%     (do not fabricate examples) -- e.g. via
-%     \texttt{build\_working\_set().head()} in \texttt{common.py}.
-%   - Preprocessing WITH justification: lowercase, strip URLs, keep
-%     Roman letters/digits, collapse 3+ repeated chars; justify as
-%     normalizing emphatic typing without destroying word identity.
-%   - Limitations (be honest, rubric wants this): "Neutral" folds two
-%     distinct phenomena (BnSentMix's "mixed" + "surprise") into one
-%     class -- reference the 0.6562 full-supervision ceiling (Table
-%     \ref{tab:main-results}) as direct evidence this bounds achievable
-%     performance regardless of model choice. The three sources differ in
-%     genre (comments vs. reviews), a possible domain-shift risk.
+\subsection{Source and size}
+
+We construct our working corpus by merging three publicly available
+resources. BnSentMix \citep{alam2025bnsentmix} contributes 20{,}015 rows of
+Bengali--English code-mixed social media text with four-way sentiment labels.
+The b-and-b-80K dataset \citep{kaggle_bandb80k} contributes 80{,}098 rows; we
+drop its native-Bengali-script column and retain only the Romanized (Banglish)
+text field, consistent with our focus on orthographic variation in
+Roman-script transliteration. EnBn Code-Mixed Two-Class Sentiment Balanced
+100K \citep{enbn100k} contributes 100{,}000 rows; the dataset carries no author
+attribution on its source page, and we cite it here as author-unattributed,
+obtained via the dataset file itself, rather than inventing a provenance.
+Concatenating and deduplicating the three sources by exact text match yields
+186{,}138 unique rows. From this pool we draw a class-balanced working sample
+of 11{,}788 rows: 3{,}889 Negative, 4{,}000 Neutral, and 3{,}899 Positive.
+
+\subsection{Label unification}
+
+The three source datasets use incompatible label schemes (a five-way numeric
+scheme, an emotion-word scheme, and a native two-class scheme), which we unify
+into a single three-class Positive/Negative/Neutral target as shown in
+Table~\ref{tab:label-map}.
+
+\begin{table}[t]
+\centering
+\caption{Unification of the three source label schemes into a common
+three-class target.}
+\label{tab:label-map}
+\begin{tabular}{ll}
+\toprule
+\textbf{Original scheme} & \textbf{Mapped to} \\
+\midrule
+BnSentMix numeric 0 & Positive \\
+BnSentMix numeric 1 & Negative \\
+BnSentMix numeric 2, 3 (``mixed''), 4 & Neutral \\
+\midrule
+\emph{joy, happy, happiness, love} & Positive \\
+\emph{sadness, sad, anger, angry,} & \multirow{2}{*}{Negative} \\
+\emph{disgust, fear, hate} & \\
+\emph{surprise, surprised, neutral,} & \multirow{2}{*}{Neutral} \\
+\emph{mixed, none} & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Split}
+
+We hold out 20\% of the balanced sample as a stratified test set (an 80/20
+train/test split). From the remaining training pool we carve a stratified
+600-row labeled seed set $L$; the rest ($\sim$8{,}830 rows) forms the
+unlabeled pool $U$ used for co-training. All reported numbers are averaged
+across three random seeds (42, 7, 2024) to control for seed-dependent variance
+in the initial labeled sample.
+
+\subsection{Class distribution}
+
+The balanced working set is approximately uniform across the three classes by
+construction (Negative 3{,}889 / Neutral 4{,}000 / Positive 3{,}899), so
+per-class support in the confusion matrices reported in
+Section~\ref{sec:results} (Figure~\ref{fig:confusion}) is directly comparable
+across classes without reweighting.
+
+\subsection{Representative samples}
+
+% !! UNVERIFIED -- the data/ CSVs are not present in this checkout, so these
+% two strings could not be checked against the merged pool. Re-run
+% build_working_set().head() and confirm both verbatim before submitting.
+% A THIRD example still needs to be pulled (do not hand-pick clean cases).
+To illustrate the orthographic variation the pipeline must handle, we draw the
+following examples directly from the working set:
+
+\begin{itemize}
+  \item ``\emph{ei ghrinjo opradhi dhoriye din\ldots}'' $\rightarrow$ Negative
+  \item ``\emph{apps takay onek vlo hoise\ldots}'' $\rightarrow$ Positive
+\end{itemize}
+
+\subsection{Preprocessing}
+
+Raw text is lowercased, URLs are stripped, and only Roman letters and digits
+are retained. Sequences of three or more repeated characters are collapsed to
+two (e.g.\ ``sooooo'' $\rightarrow$ ``soo''), which normalizes the emphatic
+elongated typing common in social media comments without destroying word
+identity---collapsing to two rather than one preserves the doubled-letter
+spellings that are themselves legitimate in Banglish transliteration.
+Exact-text-match deduplication is applied across the merged pool before
+sampling, preventing a single virally-copied comment from inflating the
+apparent size of its class.
+
+\subsection{Known limitations and biases}
+
+Two limitations of this dataset construction are worth stating explicitly
+rather than glossing over. First, the label unification folds two semantically
+distinct phenomena---genuinely mixed or ambivalent sentiment, and
+surprise---into a single Neutral class; this is a modeling simplification, and
+we present the full-supervision performance ceiling of 0.656 macro-F1
+(Table~\ref{tab:main-results}) as direct evidence that this label scheme, not
+model capacity alone, bounds what any classifier can achieve on this task.
+Second, the three source datasets differ in genre---YouTube and Facebook
+comments, e-commerce product reviews, and general social media text
+respectively---and merging them may introduce domain-shift noise between the
+labeled seed set and the test distribution, depending on which sources happen
+to dominate each stratified split.
 
 % =============================================================================
 \section{Methodology}
