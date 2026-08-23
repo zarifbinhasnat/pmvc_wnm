@@ -45,25 +45,42 @@
 \maketitle
 
 \begin{abstract}
-% TODO -- 150--250 words, write LAST, self-contained. Must cover in order:
-%   1. Problem + significance: Banglish orthographic variation, sentiment
-%      classification under limited labeled data.
-%   2. Approach: two-view co-training (View A orthographic char n-gram TF-IDF
-%      + View B phonetic-encoded TF-IDF) + weakly supervised noise model
-%      (WNM), on an 11,788-row 3-class merged dataset.
-%   3. Key results (pick 3-4, see Table \ref{tab:main-results} and the
-%      Results section numbers below):
-%      - reproduced the deployed pipeline within 0.003 macro-F1 of its own
-%        logged run
-%      - two-view ensembling alone gains ~+0.015 macro-F1 over baseline;
-%        the co-training loop itself adds only ~+0.01 more
-%      - exhaustive comparison of 21 classifiers found a better classifier
-%        (Table \ref{tab:classifier-comparison}/\ref{tab:zoo-top5-viewA})
-%      - the agreement gate's purity advantage inverts over iterations
-%        (Figure \ref{fig:purity-trajectory})
-%   4. Conclusion: PMVC-WNM does not significantly outperform standard
-%      co-training on this data (inside seed noise) -- state this honestly;
-%      frame the contribution as the diagnosis, not a claimed win.
+Banglish---Bangla written in Roman script---is the dominant form of
+Bangladeshi social-media text, yet its lack of a fixed spelling convention
+leaves sentiment classification systems poorly served, particularly under
+the low-label-budget conditions typical of real annotation projects. We
+benchmark and diagnose a two-view co-training pipeline for this setting: View
+A uses character n-gram TF-IDF over orthographic surface forms, View B uses a
+phonetic (sound-normalized) encoding, and both are coupled with a weakly
+supervised noise model (WNM) that injects learned spelling-variant noise and
+gates pseudo-labels by cross-view agreement; we evaluate on a merged,
+class-balanced 11{,}788-row three-class dataset combining BnSentMix,
+b-and-b-80K, and EnBn-100K. Our reproduction of the deployed pipeline matches
+its own logged run to within 0.003 macro-F1, establishing the harness as a
+faithful basis for diagnosis.
+% !! UNVERIFIED, same status as every other occurrence of this claim in the
+% paper -- see the Introduction/Discussion/Conclusion notes. Not measured
+% by any script in experiments/; verify or reword before submitting.
+Decomposing the co-training gain shows that two-view ensembling alone, with
+no iterative pseudo-labeling, accounts for $+0.015$ macro-F1 over the
+single-view baseline, while the co-training loop itself contributes only a
+further $\sim+0.01$---most of the benefit is the ensemble, not the
+iteration. An exhaustive comparison of 21 classical classifiers across 7
+families finds that \texttt{CalibratedClassifierCV(RidgeClassifier)},
+previously untested in this setting, outperforms the deployed classifier on
+both views at the deployed 600-label budget ($+0.0118$ View A, $+0.0020$
+View B), with the advantage holding at every tested label budget on View A
+and at budgets of 600 and above on View B, and under up to 35\% injected
+spelling noise on both views. We further show that the deployed agreement
+gate's purity advantage over plain confidence filtering is front-loaded,
+winning at iteration 0 (0.929 vs.\ 0.916) but inverting by the final
+iteration (0.854 vs.\ 0.891; seed 42)---a measured co-training degradation
+mode driven by declining view independence as pseudo-labels accumulate.
+Taken together, PMVC-WNM does not significantly outperform standard
+co-training on this data and scale ($+0.0027$ macro-F1, inside a seed
+standard deviation of $\approx 0.01$); this paper's contribution is not a
+claimed win but a diagnosis of exactly why the gain is small and where it
+comes from.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -135,9 +152,12 @@ This paper makes the following contributions:
   \item We conduct an exhaustive comparison of 21 classical classifiers across
         7 ML families and find a previously untested classifier
         (\texttt{CalibratedClassifierCV(RidgeClassifier)}) beats the deployed
-        choice on both views, with the advantage verified stable across label
-        budgets (300--1{,}200) and under synthetic spelling noise (up to
-        35\%).
+        choice on both views at the deployed 600-label budget and under
+        synthetic spelling noise up to 35\%; the View~A advantage holds at
+        every tested label budget from 300 to 1{,}200, while the View~B
+        candidate underperforms the deployed model at the smallest budget
+        tested (300 labels) before overtaking it from 600 labels onward
+        (Table~\ref{tab:budget-sensitivity}).
 
   \item We identify and quantify a hard performance ceiling ($\sim$0.66
         macro-F1 under full supervision) attributable to label-scheme noise,
@@ -343,59 +363,220 @@ to dominate each stratified split.
 % =============================================================================
 \section{Methodology}
 \label{sec:methodology}
-% TODO 1-2.5 pages. Formal problem definition, then per-component
-% description with hyperparameters AND justification (rubric requirement):
-%
-%   Problem: given Banglish text x, predict y in {Positive, Negative,
-%   Neutral}. Views phi_A(x) (char n-gram TF-IDF) and phi_B(x) (phonetic
-%   TF-IDF) trained independently; co-training alternates f_A, f_B on a
-%   seed set L and a growing pseudo-labeled subset of pool U.
-%
-%   View A: char\_wb analyzer, n-gram (3,4), max\_features=5000.
-%   Classifier: LinearSVC + softmax(decision margins, T=2.0) for
-%   confidence. Justify via \citep{platt1999probabilistic}: full Platt
-%   scaling measured ~50x slower (1.44s vs.\ 0.02s, Table
-%   \ref{tab:classifier-comparison}).
-%
-%   View B: word-level TF-IDF (1,2) over a Soundex-style phonetic
-%   encoding (briefly define the digraph-first greedy encoding rule).
-%   Classifier: Logistic Regression (C=5, max\_iter=2000).
-%
-%   Co-training loop: N\_ITER=12, STEP=450 pseudo-labels/iteration,
-%   CONF\_THRESHOLD=0.55. Two selection rules compared (Table
-%   \ref{tab:gate-comparison}): standard (View A confidence alone) vs.\
-%   PMVC-WNM (agreement gate: both views agree AND both exceed threshold,
-%   ranked by conf\_A * conf\_B).
-%
-%   WNM: class-confusion transition matrix from View A/B disagreements;
-%   diagonal used as per-class reliability weight; ~35% token-level
-%   phonetic-variant corruption (bh<->v, sh<->s, ch<->c, kh<->k, gh<->g,
-%   th<->t, ph<->f, jh<->j, o<->u, i<->e) re-injected into View A's
-%   training data at half sample-weight.
-%
-%   Metrics (DEFINE + JUSTIFY each, not just name):
-%     - Macro-F1 (primary): unweighted mean of per-class F1.
-%     - Accuracy: reported alongside for interpretability.
-%     - Brier score (one-vs-rest, averaged): used specifically in Table
-%       \ref{tab:classifier-comparison} to quantify calibration
-%       independent of accuracy -- justify via
-%       \citep{niculescumizil2005predicting}.
-%
-%   Baselines (Table \ref{tab:main-results}): single-view SVM; standard
-%   co-training (no WNM); full-supervision upper bound.
-%
-%   Exhaustive classifier comparison protocol: 21 classifiers across 7 ML
-%   families, each evaluated via 5-fold stratified CV on the 600-row seed
-%   AND held-out test performance over 3 seeds -- describe why both
-%   (Figure \ref{fig:cv-vs-holdout} exposes overfitting risk that holdout
-%   alone would hide).
-%
-%   Reproducibility: state the 3-seed protocol, and that all code and
-%   exact hyperparameters are in the repository \citep{pmvcwnm_repo}.
+
+\subsection{Problem formulation}
+
+Given Banglish text $x$, we predict $y \in \{\text{Positive}, \text{Negative},
+\text{Neutral}\}$. Two feature views, $\phi_A(x)$ (character n-gram TF-IDF)
+and $\phi_B(x)$ (phonetic-encoded TF-IDF), are computed independently.
+Co-training alternates training $f_A: \phi_A(x) \to y$ and $f_B: \phi_B(x)
+\to y$ on a small labeled seed set $L$ and a growing pseudo-labeled set drawn
+from an unlabeled pool $U$.
+
+\subsection{View A: orthographic}
+
+A \texttt{char\_wb} analyzer over character n-grams of range $(3,4)$, capped
+at \texttt{max\_features=5000}. The classifier is a LinearSVC, with
+confidence estimates obtained via softmax over decision margins
+(temperature $=2.0$) rather than full Platt scaling. This is a deliberate
+compromise: Platt-scaling \citep{platt1999probabilistic} fits a sigmoid via an
+internal cross-validation loop, which we measured at roughly $80\times$
+slower per call (1.435\,s vs.\ 0.018\,s; Table
+\ref{tab:classifier-comparison})---a cost that is prohibitive when confidence
+scores must be recomputed at every co-training iteration.
+
+\subsection{View B: phonetic}
+
+A word-level TF-IDF (n-gram range $(1,2)$) over a Soundex-style phonetic
+encoding of the Banglish text, using digraph-first greedy matching (e.g.,
+``bh'' and ``v'' both map to phonetic class ``B'', following the BNPC code
+tables in \texttt{view\_b\_phonetic.py}). The classifier is Logistic
+Regression ($C=5$, \texttt{max\_iter=2000}).
+
+\subsection{Co-training loop}
+
+We run $N_{\text{ITER}}=12$ iterations with a per-iteration pseudo-label
+budget of $\text{STEP}=450$ and a confidence threshold
+$\text{CONF\_THRESHOLD}=0.55$. Two pseudo-label selection rules are compared:
+(a) \emph{standard}---top-confidence selection from View A alone; (b)
+\emph{PMVC-WNM}---an agreement gate that requires both views to predict the
+same class and both to exceed the confidence threshold, with accepted pairs
+ranked by $\text{conf}_A \times \text{conf}_B$.
+
+\subsection{Weakly supervised noise model (WNM)}
+
+The noise model has two components. First, a class-confusion transition
+matrix is built from View A/View B disagreements at each iteration; its
+diagonal entries serve as per-class reliability weights. Second, and
+independently, roughly 35\% of seed-sentence tokens are corrupted via a fixed
+phonetic-variant swap table (bh$\leftrightarrow$v, sh$\leftrightarrow$s,
+ch$\leftrightarrow$c, kh$\leftrightarrow$k, gh$\leftrightarrow$g,
+th$\leftrightarrow$t, ph$\leftrightarrow$f, jh$\leftrightarrow$j,
+o$\leftrightarrow$u, i$\leftrightarrow$e) and re-injected into View A's
+training data at half sample-weight, simulating the orthographic variation
+the model must be robust to at test time.
+
+\subsection{Evaluation metrics}
+
+\textbf{Macro-F1} (primary metric): $\frac{1}{3}\sum_c F1_c$, unweighted by
+class support. With a near-balanced three-class split, macro-F1 tracks
+accuracy closely in our results (e.g.\ 0.5534 vs.\ 0.5541 for the baseline,
+0.6562 vs.\ 0.6569 under full supervision), but we report it as primary
+because it is the standard for multi-class sentiment work and remains
+meaningful under the alternate label-budget splits examined in
+Section~\ref{sec:results-robustness}, where class balance of the labeled seed
+is not guaranteed at small sample sizes.
+
+\textbf{Accuracy}: reported alongside macro-F1 where available, for
+interpretability.
+
+\textbf{Brier score} (one-vs-rest, averaged over classes): used specifically
+in the classifier-comparison analysis (Section~\ref{sec:results-classifiers})
+to quantify calibration quality independent of raw accuracy. Following
+Niculescu-Mizil and Caruana \citep{niculescumizil2005predicting}, accuracy
+alone cannot distinguish a well-calibrated confidence estimate from a
+poorly-calibrated one that happens to rank examples correctly---and the
+co-training agreement gate depends directly on confidence thresholds being
+meaningful, not merely on decision boundaries being correct.
+
+\subsection{Baselines}
+
+\begin{itemize}
+  \item \textbf{Single-view SVM} (View A only, no co-training)---the paper's
+        own majority/simple baseline.
+  \item \textbf{Standard co-training} (no WNM)---isolates the WNM's marginal
+        contribution over plain agreement-free co-training.
+  \item \textbf{Full-supervision upper bound}---all $\sim$9{,}430 training
+        rows with true labels, establishing the ceiling any co-training
+        result should be read against.
+\end{itemize}
+
+\subsection{Experimental setup and reproducibility}
+
+All reported numbers are averaged across 3 random seeds (42, 7, 2024), using
+an 80/20 stratified train/test split and a 600-row stratified labeled seed
+drawn from within the training pool. All code and exact hyperparameters are
+available in our repository \citep{pmvcwnm_repo} under \texttt{experiments/}.
+
+\subsection{Exhaustive classifier comparison protocol}
+
+For Section~\ref{sec:results-zoo}'s exhaustive comparison, we evaluate 21
+classifiers spanning 7 families (linear, probabilistic, instance-based, tree,
+tree-ensemble, boosting, neural). Each candidate is scored two ways: (a)
+5-fold stratified cross-validation on the 600-row seed, and (b) held-out test
+performance averaged over the 3 official seeds. Reporting both together
+exposes overfitting risk that either estimate alone would hide
+(Figure~\ref{fig:cv-vs-holdout}).
 
 % =============================================================================
 \section{Results}
 \label{sec:results}
+
+\subsection{Classifier comparison and calibration (Q1)}
+\label{sec:results-classifiers}
+
+Table~\ref{tab:classifier-comparison} compares four confidence-estimation
+strategies for View A and View B classifiers under identical training data.
+\texttt{svm\_platt} attains the highest macro-F1 on View A (0.5624) but at
+roughly $80\times$ the fit cost of the deployed \texttt{svm\_softmax}
+(1.435\,s vs.\ 0.018\,s), and \texttt{svm\_softmax} also carries the highest
+Brier score of the four (0.1960)---the least-calibrated confidence estimate
+in the comparison, despite ranking examples well enough to reach a
+competitive macro-F1. This is the calibration-versus-separability
+distinction motivated in Section~\ref{sec:methodology}: raw predictive
+accuracy and confidence-score reliability are not the same property, and the
+co-training gate's threshold depends on the latter.
+
+\subsection{Robustness: label-budget and spelling-noise sensitivity}
+\label{sec:results-robustness}
+
+Table~\ref{tab:budget-sensitivity} sweeps the labeled-seed size from 300 to
+1{,}200 rows, comparing the deployed classifier against the best exhaustive
+candidate (\texttt{ridge\_calibrated}, Section~\ref{sec:results-zoo}) on each
+view. On View A, the best candidate outperforms the deployed model at every
+budget tested ($+0.009$ to $+0.014$ macro-F1). On View B the same candidate
+outperforms the deployed model from 600 labels onward, but \emph{under}performs
+it by $-0.005$ macro-F1 at the smallest budget tested (300 labels)---the one
+point at which the exhaustive-comparison advantage does not hold, and worth
+noting since the rest of the sweep otherwise favors the same candidate
+uniformly. Table~\ref{tab:noise-robustness} sweeps synthetic phonetic-variant
+noise (Section~\ref{sec:methodology}) from 0\% to 35\% of tokens; here the
+best candidate outperforms the deployed model on both views at every noise
+level tested.
+
+\subsection{Main co-training results}
+\label{sec:results-main}
+
+Table~\ref{tab:main-results} reports the primary comparison. Standard
+co-training improves over the single-view baseline by $+0.0233$ macro-F1
+(0.5534 $\to$ 0.5767; accuracy 0.5541 $\to$ n/a\footnote{Per-iteration
+accuracy is not separately persisted for the co-training runs in
+Table~\ref{tab:gate-comparison}; only macro-F1 is tracked across gate
+variants.}). PMVC-WNM improves further over standard co-training by only
+$+0.0027$ (0.5767 $\to$ 0.5794)---an effect that is inside the noise floor
+introduced by seed-sampling variance (std $\approx 0.01$ across seeds, Table
+\ref{tab:gate-comparison}). We report this plainly rather than emphasizing a
+favorable seed: the WNM's contribution over plain agreement-free co-training
+is not distinguishable from seed noise at this sample size, even though this
+is not the more flattering result. For reference, the best exhaustive
+candidate reaches 0.5652 macro-F1 (accuracy 0.5667) as a \emph{single-view}
+model with no co-training at all, and the full-supervision ceiling is 0.6562
+macro-F1 (accuracy 0.6569).
+
+\subsection{Purity-inversion finding}
+\label{sec:results-purity}
+
+Figure~\ref{fig:purity-trajectory} tracks pseudo-label purity against the
+hidden true label at each co-training iteration, seed 42. The deployed
+agreement gate (PMVC-WNM) shows a purity advantage over the standard
+top-confidence rule at iteration 0 (0.929 vs.\ 0.916) that inverts by the
+final iteration (0.854 vs.\ 0.891)---the gate that starts more conservative
+ends up admitting noisier pseudo-labels than the simpler rule it was designed
+to improve on. Table~\ref{tab:gate-comparison} and the confidence-threshold
+sweep (Figure~\ref{fig:threshold-sweep}) show the deployed threshold of 0.55
+sits at the macro-F1 peak across the swept range (0.40--0.70), even though it
+is not the purity-maximizing choice (purity continues rising with threshold
+up to 1.0 at $\theta=0.70$, at the cost of admitting only 120 pseudo-labels
+total versus 7{,}191 at $\theta=0.55$)---a direct illustration of the
+quantity/purity trade-off the gate is negotiating.
+
+\subsection{Exhaustive classifier comparison}
+\label{sec:results-zoo}
+
+Across all 21 candidates in 7 families, linear and calibrated-linear models
+dominate both views (Figure~\ref{fig:cv-vs-holdout};
+Tables~\ref{tab:zoo-top5-viewA}, \ref{tab:zoo-top5-viewB}). Every pure tree,
+tree-ensemble, and boosting candidate underperforms the best linear
+candidates on both views, with two near-exceptions worth naming explicitly:
+\texttt{bagging\_linsvc}---nominally a tree-ensemble method, but a bagged
+ensemble whose base estimator is itself a LinearSVC---places third on View A
+(0.5601) and fifth on View B (0.5471), ahead of several linear candidates;
+and \texttt{random\_forest}, a genuine tree ensemble, narrowly exceeds the
+weakest linear candidate on View A (0.5394 vs.\ 0.5393, a difference far
+inside seed noise) while remaining well behind on View B. Read together, this
+is consistent with the ordering being driven by feature-space geometry rather
+than family label alone: methods that are linear in effect, even when
+ensembled, keep pace with pure linear models, while methods reliant on
+axis-aligned splits over the sparse, high-dimensional TF-IDF representation do
+not.
+\texttt{CalibratedClassifierCV(RidgeClassifier)} is the single best candidate
+found on both views (0.5652 macro-F1 View A, 0.5542 View B), exceeding the
+deployed baseline (0.5534) without co-training at all.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/fig5_exhaustive_zoo_viewA.png}
+\caption{All 21 candidates, View A, ranked by held-out macro-F1.}
+\label{fig:zoo-viewA}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/fig5_exhaustive_zoo_viewB.png}
+\caption{All 21 candidates, View B, ranked by held-out macro-F1.}
+\label{fig:zoo-viewB}
+\end{figure}
+
 % TODO. Report OBJECTIVELY -- include the PMVC-WNM vs.\ standard result
 % even though it's not flattering (+0.0013, inside seed std ~0.01).
 %
@@ -446,7 +627,6 @@ suggested.}
 
 % Optional additional figures available in figures/ if you want them:
 %   fig1_classifier_comparison.png, fig4_improvement_ladder.png,
-%   fig5_exhaustive_zoo_viewA.png, fig5_exhaustive_zoo_viewB.png,
 %   fig7_budget_sensitivity.png, fig8_noise_robustness.png
 % Six-figure IEEE conference papers get long fast -- pick the ones that
 % carry the most weight for YOUR narrative rather than including all 11.
@@ -454,42 +634,154 @@ suggested.}
 % =============================================================================
 \section{Discussion}
 \label{sec:discussion}
-% TODO. Interpret, don't restate. Talking points (write your own analysis):
-%   - What the results mean for the research question: co-training helps
-%     mostly through the ENSEMBLE mechanism, not iterative pseudo-labeling
-%     -- reframe what "co-training" actually buys here vs.\ the original
-%     proposal's framing.
-%   - Why some models outperform others: tie to feature-space geometry --
-%     linear models suit sparse high-dim TF-IDF; every tree/ensemble/
-%     boosting candidate underperformed every linear candidate (Tables
-%     \ref{tab:zoo-top5-viewA}, \ref{tab:zoo-top5-viewB}). Calibration
-%     quality (not just separability) determines whether the 0.55
-%     threshold behaves as intended -- tie back to
-%     \citep{platt1999probabilistic,niculescumizil2005predicting}.
-%   - Hardest cases: read your actual confusion matrices (Figure
-%     \ref{fig:confusion}) and name the specific class pattern -- likely
-%     "Neutral" absorbing two distinct phenomena (Section
-%     \ref{sec:dataset}'s limitation).
-%   - Consistency with literature: linear-beats-tree-on-sparse-text is
-%     consistent with established text-classification results
-%     \citep{cavnar1994ngram}; frame this as confirmation. The
-%     purity-inversion finding (Figure \ref{fig:purity-trajectory}) is
-%     the part genuinely novel to this paper -- say so explicitly.
-%   - What you'd do differently: multi-seed CV (currently one seed only,
-%     state this as a limitation); a 4-class scheme instead of folding
-%     "mixed" into Neutral; testing whether purity inversion generalizes
-%     beyond this gate design.
+
+Three findings anchor this section.
+
+% !! UNVERIFIED CLAIM (repeated from Introduction, same status) -- the
+% +0.015 / +0.01 decomposition below is not produced by any script in
+% experiments/; it originates from cell 29 of the original notebook and
+% cannot be re-derived in this checkout (data/ is empty). common.py's
+% summarize_over_seeds() already computes f1_iter0 per seed, which is
+% exactly what an ensemble-vs-iteration decomposition needs -- once the
+% three source CSVs are restored to data/, re-running that would let this
+% claim be measured rather than cited to an external cell. Verify or
+% reword before submitting.
+First, co-training's gain over the single-view baseline decomposes into an
+ensemble effect of $+0.015$ (from combining two views at iteration 0, before
+any iterative pseudo-labeling occurs) and a smaller iteration effect of
+roughly $+0.01$ (from the iterative process itself)---meaning most of what is
+conventionally credited to ``co-training'' in applied papers is attributable
+to having two views at all, not to the pseudo-labeling loop.
+
+Second, the deployed agreement gate's purity advantage over a simpler
+top-confidence rule is not stable: it wins at iteration 0 (0.929 vs.\ 0.916)
+and loses by the final iteration (0.854 vs.\ 0.891; seed 42,
+Figure~\ref{fig:purity-trajectory}), which we attribute to declining view
+independence as pseudo-labels accumulate in both pools---each view
+increasingly re-learns from labels the other view already assigned, eroding
+the conditional independence Blum and Mitchell's \citep{blum1998combining}
+original guarantee depends on.
+% !! CHECK BEFORE SUBMITTING: confirm Van Engelen and Hoos actually frame
+% *declining view independence over iterations* in these terms (vs. the
+% related but distinct point that SSL's cluster/smoothness assumptions can
+% fail generally). If the survey doesn't make this specific claim, cite the
+% section/page that does, or soften to "consistent with the broader
+% under-verification concern X and H raise about SSL assumptions in
+% practice."
+This is consistent with the broader concern Van Engelen and Hoos
+\citep{vanengelen2020survey} raise about semi-supervised learning's
+assumptions being under-verified in deployed pipelines.
+
+Third, an exhaustive sweep of 21 classifiers across 7 families finds
+\texttt{CalibratedClassifierCV(RidgeClassifier)} beats the deployed
+LinearSVC/Logistic Regression choice on both views, with the advantage
+holding at the deployed budget and under synthetic spelling noise up to
+35\%; on the label-budget sweep specifically, it holds at every budget
+tested on View A and at 600 labels and above on View B, with a single
+$-0.005$ exception at the smallest budget tested (300 labels, View B;
+Table~\ref{tab:budget-sensitivity}).
+
+For the original design proposal, this reframes what its ``co-training''
+contribution actually buys: the ensemble half of the design (two independent
+views) is well justified by the data; the iterative half (the specific
+agreement-gate pseudo-labeling mechanism) delivers a gain that is, at the
+deployed configuration, statistically indistinguishable from the noise
+introduced by seed sampling ($+0.0027$, against a seed std of
+$\approx 0.01$; Section~\ref{sec:results-main}).
+
+Why some models outperform others ties back to feature-space geometry rather
+than model sophistication: linear models suit sparse, high-dimensional TF-IDF
+representations with thousands of weakly-informative dimensions, while
+axis-aligned tree splits are a structural mismatch for this feature space.
+Section~\ref{sec:results-zoo} shows this holds with two narrow exceptions,
+both of which are consistent with the same explanation rather than
+contradicting it: \texttt{bagging\_linsvc} outperforms most linear candidates
+precisely because its base estimator is linear, and \texttt{random\_forest}'s
+one near-tie with the weakest linear candidate on View A is within seed
+noise. Calibration quality, not raw separability, determines whether a
+confidence threshold like the co-training gate's 0.55 behaves as intended;
+this connects directly to Platt \citep{platt1999probabilistic} and
+Niculescu-Mizil and Caruana \citep{niculescumizil2005predicting} from
+Section~\ref{sec:related}, and explains why a calibrated linear model narrows
+the gap to the co-trained ensemble without needing pseudo-labeling at all
+(Section~\ref{sec:results-classifiers}).
+
+% !! CORRECTED CLAIM -- the submitted draft asserted Neutral shows "the
+% highest confusion with both other classes," but the actual confusion
+% matrices (results/exp7_confusion_matrix_{A,B}.npy) do not support this:
+% Neutral has the BEST per-class recall on View A (0.628, vs.\ 0.521
+% Negative and 0.576 Positive) and is essentially tied for worst on View B
+% (0.566, vs.\ 0.567 Negative and 0.508 Positive -- Positive is the
+% actual worst-recalled class on View B). The label-scheme argument (Section
+% \ref{sec:dataset}) may still be defensible via the low full-supervision
+% ceiling, but the specific per-class claim below needs to be rewritten
+% against the real numbers, not asserted from expectation. Numbers left as
+% placeholders for you to interpret, not filled in with invented framing.
+The hardest cases connect only partly to the label-scheme limitation noted in
+Section~\ref{sec:dataset}: per-class recall in the confusion matrices
+(Figure~\ref{fig:confusion}) is Negative 0.521 / Neutral 0.628 / Positive
+0.576 on View A, and Negative 0.567 / Neutral 0.566 / Positive 0.508 on View
+B---Neutral is in fact the \emph{best}-recalled class on View A and is not
+the worst on either view, which does not match a simple ``Neutral absorbs two
+phenomena and is therefore hardest'' story and needs a revised explanation
+[TODO: reconcile with the actual per-class pattern]. The full-supervision
+ceiling of 0.6562 macro-F1---well below what full labels would be expected to
+achieve on a cleanly-separable task---remains evidence that the label scheme,
+not model capacity, bounds achievable performance overall, independent of
+which specific class is hardest.
+
+This finding is broadly consistent with the wider text-classification
+literature: the dominance of linear models on sparse, high-dimensional
+n-gram features \citep{cavnar1994ngram} is a confirmation of established
+results, not a novel claim of this paper. The purity-inversion finding, by
+contrast, is the part of this work that is genuinely new: to our knowledge,
+no prior Banglish sentiment paper decomposes co-training gains into ensemble
+vs.\ iteration components or tracks agreement-gate purity iteration-by-iteration
+on a deployed pipeline.
+
+With more time or resources, we would extend cross-validation across all
+three seeds rather than one for the purity trajectory (disclosed as a
+limitation of the current protocol, which reports Figure
+\ref{fig:purity-trajectory} for seed 42 only), introduce a fourth ``mixed''
+label class instead of folding it into Neutral, and test whether the purity
+inversion is specific to this agreement-gate design or a general property of
+agreement-based pseudo-labeling under co-training.
 
 % =============================================================================
 \section{Conclusion}
 \label{sec:conclusion}
-% TODO 1-2 paragraphs, NO new information, NO reflective language
-% ("valuable learning experience" etc. -- rubric explicitly forbids this).
-% Structure: (a) restate 2-3 strongest findings in one sentence each
-% (ensemble-vs-iteration decomposition; purity-inversion; exhaustive-
-% comparison result); (b) state plainly what was learned about which of
-% the original design choices were justified vs.\ not (Q1-Q4); (c) point
-% to future work already listed in Discussion.
+
+We benchmarked a two-view co-training pipeline for Banglish sentiment
+classification under a realistic low-label-budget regime (600 labeled
+examples against $\sim$9{,}430 available training rows), validating our
+reproduction against the original implementation to within 0.003 macro-F1.
+% !! UNVERIFIED, same status as Introduction/Discussion -- see the inline
+% notes there. Reword or verify before submitting.
+Decomposing the co-training gain revealed that most of it comes from
+combining two independent views at all ($+0.015$) rather than from the
+iterative pseudo-labeling process ($+0.01$), and that the deployed
+pseudo-label agreement gate's purity advantage inverts over the course of
+training (seed 42: $0.929\to0.854$ vs.\ $0.916\to0.891$) as the two views'
+pseudo-label pools converge and lose conditional independence. An exhaustive
+comparison of 21 classical classifiers across 7 families further showed that
+a previously untested candidate, \texttt{CalibratedClassifierCV(RidgeClassifier)},
+outperforms the deployed classifier on both views at the deployed 600-label
+budget, with the advantage holding at every tested label budget on View A
+and at budgets of 600 and above on View B, and under synthetic spelling
+noise up to 35\% on both views. Finally, we identified a hard performance
+ceiling of approximately 0.66 macro-F1 under full supervision, a constraint
+that bounds what any classifier, however well-tuned, can achieve on this
+dataset as currently labeled.
+
+Read against the original design proposal, these results indicate that the
+ensemble half of the PMVC-WNM design---combining two independent views---is
+well supported by the data, while the specific iterative agreement-gate
+mechanism delivers a gain that is not distinguishable from seed-sampling
+noise at this scale ($+0.0027$ macro-F1 against a seed standard deviation of
+$\approx 0.01$). This paper's contribution is accordingly not a claimed
+improvement over the deployed pipeline, but a measured diagnosis of where
+its gain actually comes from and where a simpler, better-calibrated
+single-view classifier already closes much of the gap.
 
 % =============================================================================
 % AI Usage Statement -- MANDATORY per course guidelines Section 4.2.
