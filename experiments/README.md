@@ -13,7 +13,7 @@ Place them in `experiments/data/`:
 - `Bengali_Banglish_80K_Dataset.csv` (Kaggle b-and-b-80k)
 - `EnBn_CodeMixed_TwoClass_Sentiment_Balanced_100k.csv`
 
-All three are on Pantho's repo, `final-project` branch.
+All three are on Pantho's repo, [`final-project` branch](https://github.com/Rafat-Pantho/ML-Banglish-co-training-prototype/tree/final-project).
 
 ## Run order
 

@@ -6,7 +6,7 @@ head-to-head benchmark run on identical data, splits, and label budget.
 - **This repo** (`pmvc_wnm`): modular `src/` implementation with the BNPC
   numeric phonetic encoder, true two-pool co-training, and a token-level
   spelling-noise injection model.
-- **External repo** ([Rafat-Pantho/ML-Banglish-co-training-prototype](https://github.com/Rafat-Pantho/ML-Banglish-co-training-prototype)):
+- **External repo** ([Rafat-Pantho/ML-Banglish-co-training-prototype, `final-project` branch](https://github.com/Rafat-Pantho/ML-Banglish-co-training-prototype/tree/final-project)):
   single-notebook prototype for CSE 4622 (IUT) with a coarse Soundex-style
   phonetic encoder, shared-pool co-training, and class-level pseudo-label
   reweighting.
@@ -193,7 +193,7 @@ design, disclosed accordingly). Script: `benchmarks/noise_robustness.py`.
 Reproduce with:
 
 ```bash
-git clone https://github.com/Rafat-Pantho/ML-Banglish-co-training-prototype ../ML-Banglish-co-training-prototype
+git clone -b final-project https://github.com/Rafat-Pantho/ML-Banglish-co-training-prototype ../ML-Banglish-co-training-prototype
 python benchmarks/benchmark.py ../ML-Banglish-co-training-prototype
 python benchmarks/noise_robustness.py ../ML-Banglish-co-training-prototype
 ```
