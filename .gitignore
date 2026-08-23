@@ -4,5 +4,7 @@ __pycache__/
 
 # Dataset and generated artifacts
 data/*.csv
-*.png
+ablation.png
+learning_curve.png
+disagree_rate.png
 experiments/data/
